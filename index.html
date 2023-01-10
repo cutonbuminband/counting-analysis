@@ -648,7 +648,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell-output cell-output-display" data-execution_count="8">
 <div id="tbl-oldest-counters" class="anchored">
 <table class="table table-sm table-striped">
-<caption>Table&nbsp;2: The 10 currently-active counters who’ve been counting for the longest time</caption>
+<caption>Table&nbsp;2: The 25 currently-active counters who’ve been counting for the longest time</caption>
 <thead>
 <tr class="header">
 <th style="text-align: left;"><strong>username</strong></th>
@@ -1416,7 +1416,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb13-153"><a href="#cb13-153" aria-hidden="true" tabindex="-1"></a>We can see who the oldest still-active counters are, where still-active is generously defined as "having made a count within the last six months".</span>
 <span id="cb13-156"><a href="#cb13-156" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
 <span id="cb13-157"><a href="#cb13-157" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: tbl-oldest-counters</span></span>
-<span id="cb13-158"><a href="#cb13-158" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: The 10 currently-active counters who've been counting for the longest time</span></span>
+<span id="cb13-158"><a href="#cb13-158" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: The 25 currently-active counters who've been counting for the longest time</span></span>
 <span id="cb13-159"><a href="#cb13-159" aria-hidden="true" tabindex="-1"></a>cutoff_date <span class="op">=</span> pd.to_datetime(<span class="st">'today'</span>) <span class="op">-</span> pd.Timedelta(<span class="st">'180d'</span>)</span>
 <span id="cb13-160"><a href="#cb13-160" aria-hidden="true" tabindex="-1"></a>active_counters <span class="op">=</span> counts.loc[counts[<span class="st">'date'</span>] <span class="op">&gt;</span> cutoff_date].groupby(<span class="st">"username"</span>).groups.keys()</span>
 <span id="cb13-161"><a href="#cb13-161" aria-hidden="true" tabindex="-1"></a>oldest_counters <span class="op">=</span> counts.loc[counts[<span class="st">'username'</span>].isin(active_counters)].groupby(<span class="st">"username"</span>)[<span class="st">"date"</span>].agg([<span class="bu">min</span>, <span class="bu">max</span>])</span>
