@@ -118,7 +118,7 @@ combined = combined[["rank", "c", "c_eff"]]
 combined.c_eff = combined.c_eff.round().astype(int)
 combined.columns = ["HOC rank", "N", "N_(effective)"]
 combined.index.name = "Username"
-combined.head(20)
+combined.head(25)
 ```
 
 We can also get the replying-to and replied-by stats for a single user
@@ -142,7 +142,7 @@ We can see who the oldest still-active counters are, where still-active is gener
 cutoff_date = pd.to_datetime('today') - pd.Timedelta('180d')
 active_counters = counts.loc[counts['date'] > cutoff_date].groupby("username").groups.keys()
 oldest_counters = counts.loc[counts['username'].isin(active_counters)].groupby("username")["date"].agg([min, max])
-oldest_counters = oldest_counters.sort_values('min').head(20)
+oldest_counters = oldest_counters.sort_values('min').head(25)
 Markdown(oldest_counters.apply(lambda x: x.dt.date).to_markdown(headers=["**username**", "**First Count**", "**Latest Count**"]))
 ```
 
