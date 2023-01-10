@@ -1,0 +1,77 @@
+---
+title: "The use of separators"
+---
+We have access to the body of each comment, so it's possible to do some of analysis on those. One interesting thing could be to look at whether a given count is comma separated, space separated or uses no separator at all. And a natural question to ask is how the distribution between those three types has changed over time
+
+Specifically, we'll define the three types of count as:
+
+- Comma separated counts look like `[digit]*{1-3}(,[digit]*3)*`
+- Space separated counts are the same, with the comma replaced by a space
+- No separated counts are defined as one of
+  - Counts with only one digit
+  - Counts with no separators between their first and last digit, with separators defined fairly broadly.
+
+
+```{python}
+#| code-fold: true
+#| code-summary: "Code for importing packages and loading data"
+from pathlib import Path
+import pandas as pd
+import re
+import sqlite3
+import matplotlib.pyplot as plt
+
+from rcounting import parsing
+import seaborn as sns
+sns.set_theme()
+from IPython.display import Markdown
+data_directory = Path("../data")
+db = sqlite3.connect(data_directory / "counting.sqlite")
+
+counts = pd.read_sql("select comments.body, comments.timestamp from comments join submissions "
+                       "on comments.submission_id = submissions.submission_id where comments.position > 0 "
+                       "order by submissions.timestamp, comments.position", db)
+counts['date'] = pd.to_datetime(counts['timestamp'], unit='s')
+counts.drop('timestamp', inplace=True, axis=1)
+```
+We started by making the necessary imports and loading all the data; with that out of the way we can implement the rules defined above
+
+```{python}
+data = counts.set_index('date')
+
+data['body'] = data['body'].apply(parsing.strip_markdown_links)
+comma_regex = re.compile(r'\d{1,3}(?:,\d{3})+')
+data['is_comma_separated'] = data['body'].apply(lambda x: bool(re.search(comma_regex, x)))
+space_regex = re.compile(r'\d{1,3}(?: \d{3})+')
+data['is_space_separated'] = data['body'].apply(lambda x: bool(re.search(space_regex, x)))
+def no_separators(body):
+    body = body.split('\n')[0]
+    separators = re.escape("' , .*/")
+    regex = (rf"(?:^[^\d]*\d[^\d]*$)|"
+             rf"(?:^[^\d]*\d[^{separators}]*\d[^\d]*$)")
+    regex = re.compile(regex)
+    result = re.search(regex, body)
+    return bool(result)
+
+data['no_separators'] = data['body'].apply(no_separators)
+data.sort_index(inplace=True)
+```
+
+Once we have the data, we can get a 14-day rolling average, and resample the points to nice 6h intervals. The resampling makes plotting with pandas look nicer, since it can more easily deal with the x-axis.
+```{python}
+#| label: fig-separators
+#| fig-cap: The separators used on r/counting over time
+#| column: body-outset
+resampled = (data[['is_comma_separated', 'is_space_separated', 'no_separators']].rolling('14d').mean().resample('6h').mean() * 100)
+fig, ax = plt.subplots(1)
+resampled.plot(ax=ax, ylabel='Percentage of counts', lw=2)
+h, l = ax.get_legend_handles_labels()
+ax.legend(h[:3],["commas", "spaces", "no separator"])
+ax.set_ylim([0, 100])
+ax.set_xlabel('')
+plt.show()
+```
+
+The result is shown on figure @fig-separators
+
+Notice you can clearly see when the count crossed 100k: that's when the 'no separators' line quickly drops from being the majority to being a clear minority of counts. That was followed by the era of commas, when the default format was just to use commas as separators. Over the last years, commas have significantly declined, and have now been overtaken by spaces as the most popular separator, although there's a lot of variation depending on who exactly is active. No separators has bouts of activity, but is generally below the other two options. Pretty neat!

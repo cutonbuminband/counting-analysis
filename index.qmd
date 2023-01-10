@@ -1,0 +1,186 @@
+---
+title: "Analysing rcounting data"
+---
+This page highlights some of the initial analysis I've done of the counts made on [r/counting](reddit.com/r/counting). To do this, I use the database of all counts that was put together by u/davidjl123 and u/Countletics (and others!), as modified by me. For more niche analysis, see some of the other pages on the sidebar on the left. Most of the figures and tables here have also been posted on the subreddit, but I wanted to have them in a central place. I also liked being able to show the code and the tables or figures it generates in the same document, so that people can see both. Some of it isn't particularly interesting, so I've hidden it behind a code widget. You can unfold it just by clicking.
+
+The idea of this page is also that I'll try and keep the analysis current as more counts come in, while the other pages might slowly grow stale
+
+# Imports and initialization
+We'll start with some imports, after which we can connect to the database of couts
+
+```{python}
+#| code-fold: true
+#| code-summary: "Code for importing packages and connecting to the database"
+from pathlib import Path
+import pandas as pd
+import numpy as np
+import re
+import sqlite3
+import matplotlib.pyplot as plt
+
+from rcounting import side_threads, counters, analysis, thread_navigation as tn, parsing
+from rcounting.reddit_interface import reddit
+import seaborn as sns
+sns.set_theme()
+from IPython.display import Markdown
+data_directory = Path("../data")
+
+db = sqlite3.connect(data_directory / "counting.sqlite")
+```
+
+# Loading Data
+Then we load some data, both the counts and the gets. We convert the timestamp to a date column, and add a "replying to" column, since some of what we'll be doing later needs it.
+
+```{python}
+counts = pd.read_sql("select comments.username, comments.submission_id, comments.timestamp "
+                       "from comments join submissions "
+                       "on comments.submission_id = submissions.submission_id "
+                       "where comments.position > 0 "
+                       "order by submissions.timestamp, comments.position", db)
+counts['date'] = pd.to_datetime(counts['timestamp'], unit='s')
+counts["username"] = counts["username"].apply(counters.apply_alias)
+counts.drop('timestamp', inplace=True, axis=1)
+counts["replying_to"] = counts["username"].shift(1)
+print(f"There are {len(counts)} comments logged on main")
+gets = counts.groupby("submission_id").last().sort_values('date').reset_index()
+gets['basecount'] = (gets.index + 15) * 1000
+gets.loc[[0, 1], ['basecount']] = [0, 16691]
+```
+
+# Counting progress over time
+
+A first bit of analysis is to visualize the progress of r/counting over time. That isn't particularly difficult to do
+```{python}
+#| label: fig-progress
+#| fig-cap: Cumulative counts made on /r/counting as a function of time
+data = gets.set_index('date')
+ax = (data.resample('30d')[["basecount"]].mean() / 1e6).plot(ylabel='Current count [millions]', xlabel='Date')
+h, l = ax.get_legend_handles_labels()
+ax.legend(h[:1],['count'])
+ax.set_title('Counting progress over time')
+plt.show()
+```
+
+On @fig-progress you can see that the counting rate varies quite a bit over time, with signifcant peaks and lulls in activity. Whether or not there are active runners really changes how fast the count is progressing!
+
+# Total counts vs k_parts
+We can try plotting thread participation vs total counts. The expectation is that generally, people who've made more total counts will also have counted in more threads. However, some users might have periods where they make a count every now and then but never do any runs, leading to comparatively more k_parts. On the other hand, some counters might only do runs, giving a counts/thread of up to 500.
+
+We'll start by extracting the number of counts and the threads participated in, using the groupby functionality of `pandas`
+```{python}
+  groups = counts.groupby("username")["submission_id"]
+  k_parts = groups.nunique()
+  hoc = groups.count()
+  combined = pd.concat([k_parts, hoc], axis=1)
+  combined.columns = ["k_parts", "total_counts"]
+  combined = combined.query("k_parts >= 10")
+```
+
+We can make a polynomial fit of this (well, a linear fit of the log-log quantities), and use matplotlib to plot that
+```{python}
+#| label: fig-parts-counts
+#| fig-cap: The relationship between the total number of counts for each user, and then number of threads they've participated in
+linear_model = np.polyfit(np.log10(combined.k_parts), np.log10(combined.total_counts), 1)
+print(linear_model)
+axis = np.linspace(1, combined.k_parts.max(), endpoint=True)
+fig, ax = plt.subplots(1, figsize=(8,5))
+ax.scatter(combined.k_parts, combined.total_counts, alpha=0.7)
+ax.plot(axis, 10**(np.poly1d(linear_model)(np.log10(axis))), linestyle="--", color="0.3",
+         lw=2)
+ax.set_xlabel("Threads participated in ")
+ax.set_ylabel("Total counts made")
+ax.set_yscale("log")
+ax.set_xscale("log")
+ax.set_xlim(left=10)
+ax.set_ylim(bottom=10)
+plt.show()
+
+```
+
+You can see what that looks like on @fig-parts-counts. The dashed line is a linear fit on the log-log plot, and it has a slope of 1.3. In this model, that means that if you double the total number of threads participated in by a user, you would expect to multiply their total counts by 2.5.
+
+# Number of partners and effective number of partners
+As with the number of counts vs threads participated in, we can expect that different counters might have qualitatively different behaviour when it comes to how many counting partners they have, and how often they've counted with each one. Some counters might count a little bit with everybody, while others might run with only a few partners, and drop a count with others every now and then.
+
+To quantify how uneven the counting distribution is we can look at the [effective number of partners](https://en.wikipedia.org/wiki/Effective_number_of_parties) of each counter, and compare with the actual number of partners.
+
+```{python}
+sorted_counters = counts.groupby("username").size().sort_values(ascending=False)
+top_counters = [x for x in sorted_counters.index[:35] if not counters.is_banned_counter(x)][:30]
+top = sorted_counters.filter(items=top_counters)
+df = counts.loc[counts["username"].isin(top_counters)].groupby(["username", "replying_to"]).size()
+effective_partners = df.groupby(level=0).apply(analysis.effective_number_of_counters).to_frame()
+partners = df.groupby(level=0).count()
+combined = pd.concat([top, effective_partners, partners], axis=1)
+combined["HOC rank"] = range(1, len(combined) + 1)
+combined.columns = ["counts", "c_eff", "c", "rank"]
+combined = combined[["rank", "c", "c_eff"]]
+combined.c_eff = combined.c_eff.round().astype(int)
+combined.columns = ["HOC rank", "N", "N_(effective)"]
+combined.index.name = "Username"
+combined.head(20)
+```
+
+We can also get the replying-to and replied-by stats for a single user
+```{python}
+#| label: tbl-replying
+#| tbl-cap: The most popular counting partners of a single user
+counter = "thephilsblogbar2"
+nick = "phil"
+subset = counts.loc[counts["username"] == counter].copy()
+replied_by = counts['username'].loc[subset.index + 1]
+replied_by.index -= 1
+subset['replied_by'] = replied_by
+result = pd.concat([subset.groupby("replied_by").count().iloc[:, 0].sort_values(ascending=False),
+                    subset.groupby("replying_to").count().iloc[:, 0].sort_values(ascending=False)], axis=1).head(10)
+Markdown(result.to_markdown(headers=['Counting partner', f'No. of replies by {nick}', f'No. of replies to {nick}']))
+```
+
+# Oldest counters
+We can see who the oldest still-active counters are
+```{python}
+cutoff_date = pd.to_datetime('today') - pd.Timedelta('180d')
+active_counters = counts.loc[counts['date'] > cutoff_date].groupby("username").groups.keys()
+Markdown(counts.loc[counts['username'].isin(active_counters)].groupby("username")["date"].min().sort_values().head(20).apply(str).to_markdown(headers=["**Username**", "**First Count**"]))
+```
+
+# Gets and streaks
+Similarly to the oldest counters, we can see what the longest difference between a counter's first and last get is, and that's shown on @tbl-get-delta. Some counters have been active and getting gets for quite a while!
+
+```{python}
+#| label: tbl-get-delta
+#| tbl-cap: The longest differences between the first and last get of r/counting users (1000s of counts)
+  Markdown(gets.groupby('username').agg(lambda x: x.index[-1] - x.index[0]).iloc[:, 0].sort_values(ascending=False).head(10).to_markdown(headers=["**Username**", "**Get span**"]))
+```
+
+
+We can also calculate what the longest get streaks are.
+```{python}
+#| label: tbl-streaks
+#| tbl-cap: The longest streak
+y = gets['username']
+groups = gets.groupby((y != y.shift()).cumsum())
+columns = ['username', 'submission_id', 'basecount']
+length = 10
+
+indices = (-groups.size()).sort_values(kind='mergesort').index
+old = groups.first().loc[indices, columns]
+new = groups.last().loc[indices, columns]
+combined = old.join(new, rsuffix='_new')
+combined = combined.loc[~combined['username'].apply(counters.is_banned_counter)].head(length).reset_index(drop=True)
+combined['old_link'] = combined.apply(lambda x: f'[{int(x.basecount / 1000) + 1}K](https://reddit.com/comments/{x.submission_id}/)', axis=1)
+combined['new_link'] = combined.apply(lambda x: f'[{int(x.basecount_new / 1000) + 1}K](https://reddit.com/comments/{x.submission_id_new}/)', axis=1)
+combined['streak'] = 1 + (combined['basecount_new'] - combined['basecount']) // 1000
+combined.index += 1
+combined.index.name = "Rank"
+Markdown(combined[['username', 'old_link', 'new_link', 'streak']].to_markdown(headers=['**Rank**', '**username**', '**First Get**', '**Last Get**', '**Streak Length**']))
+```
+ The core of the extraction is the line that says `groups = gets.groupby((y != y.shift()).cumsum())`. Let's unpack it:
+
+- `y != y.shift()` assigns a value of True to all threads with a username that's different from their predecessor
+- `.cumsum()` sums up all these True values. The net result is that each get streak is given its own unique number
+- `.groupby()` extracts these groups for later use
+
+The groups are then sorted according to size, and the largest ones are shown in @tbl-streaks
+
+

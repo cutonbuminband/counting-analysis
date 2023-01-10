@@ -1,0 +1,46 @@
+---
+title: Examples
+---
+# Imports and initialization
+We start with some imports, which aren't particularly interesting, so they've been folded.
+
+```{python}
+#| code-fold: true
+#| code-summary: "Code for importing packages"
+import pandas as pd
+from rcounting import side_threads, thread_navigation as tn
+```
+
+# Validating side threads
+The `rcounting` tools have various pieces of functionality to validate the side threads it knows about, both in terms of whether the counts follow the expected format, and whether the thread obeys any special rules that might apply. Here's an example of what that looks like in a python script.
+
+
+```{python}
+# Pick a comment early in a chain
+comments = pd.DataFrame(tn.fetch_comments("gja0ehe"))
+side_thread = side_threads.get_side_thread('slowestest')
+print("The thread is valid!" if side_thread.is_valid_thread(comments) else "The thread is invalid")
+```
+
+
+The thread is valid - excellent! There's also a script that you can run from the command line to validate the most common threads. Try typing `rcounting validate -h` in a terminal to see how to use it.
+
+# Network analysis
+The rcounting tools also have functionality to do some network analysis. The following snippet will generate the (comment, replying to, weight) graph for the top 250 counters. The heavy lifting is done by the response graph [[file:../rcounting/analysis.py::def response_graph(df, n=250, username_column="username"):][response_graph]] function in [analysis.py](https://github.com/cutonbuminband/rcounting/blob/main/rcounting/analysis.py).
+
+```{python}
+from rcounting import analysis, counters
+import sqlite3
+from pathlib import Path
+data_directory = Path("../data")
+db = sqlite3.connect(data_directory / "counting.sqlite")
+counts = pd.read_sql("select comments.username "
+                       "from comments join submissions "
+                       "on comments.submission_id = submissions.submission_id "
+                       "where comments.position > 0 "
+                       "order by submissions.timestamp, comments.position", db)
+counts["username"] = counts["username"].apply(counters.apply_alias)
+n = 250
+graph = analysis.response_graph(counts, n, username_column="username")
+graph.sort_values(ascending=False, by="Weight").head()
+```

@@ -1,0 +1,5 @@
+---
+title: "About"
+---
+
+This is my website for publishing interesting bits and pieces of [r/counting](reddit.com/r/counting) data and graphs in a central place. The code builds on the `rcounting` tools that I develop [here](github.com/cutonbuminband/rcounting)

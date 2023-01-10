@@ -1,0 +1,33 @@
+project:
+  type: website
+
+website:
+  title: "rcounting"
+  sidebar:
+    style: "floating"
+    search: false
+    contents:
+    - section: Analysis
+      contents:
+        - index.qmd
+        - separators.qmd
+        - runs.qmd
+    - examples.qmd
+  page-footer:
+    center:
+      - text: "About"
+        href: about.qmd
+      - text: "Github"
+        href: https://github.com/cutonbuminband/rcounting
+format:
+  html:
+    code-tools: true
+    code-fold: show
+    theme:
+        light: flatly
+        dark: darkly
+    css: styles.css
+    toc: true
+    reference-location: margin
+    highlight-style: pygments
+reference-location: margin
