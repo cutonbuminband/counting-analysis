@@ -128,8 +128,7 @@ We can also get the replying-to and replied-by stats for a single user
 counter = "thephilsblogbar2"
 nick = "phil"
 subset = counts.loc[counts["username"] == counter].copy()
-replied_by = counts['username'].loc[subset.index + 1]
-replied_by.index -= 1
+replied_by = counts['username'].shift(-1).loc[subset.index]
 subset['replied_by'] = replied_by
 result = pd.concat([subset.groupby("replied_by").count().iloc[:, 0].sort_values(ascending=False),
                     subset.groupby("replying_to").count().iloc[:, 0].sort_values(ascending=False)], axis=1).head(10)
@@ -139,6 +138,8 @@ Markdown(result.to_markdown(headers=['Counting partner', f'No. of replies by {ni
 # Oldest counters
 We can see who the oldest still-active counters are, where still-active is generously defined as "having made a count within the last six months".
 ```{python}
+#| label: tbl-oldest-counters
+#| tbl-cap: The 10 currently-active counters who've been counting for the longest time
 cutoff_date = pd.to_datetime('today') - pd.Timedelta('180d')
 active_counters = counts.loc[counts['date'] > cutoff_date].groupby("username").groups.keys()
 oldest_counters = counts.loc[counts['username'].isin(active_counters)].groupby("username")["date"].agg([min, max])
