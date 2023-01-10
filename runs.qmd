@@ -29,7 +29,6 @@ Looking at the longest runs by total number of counts in the run is more interes
 ```{python}
 #| label: tbl-runs
 #| tbl-cap: The 10 longest runs in r/counting history
-#| code-fold: false
 #| column: body-outset
 column = df['username']
 is_different_group = (column != column.shift(2))
