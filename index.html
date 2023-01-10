@@ -554,12 +554,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>counter <span class="op">=</span> <span class="st">"thephilsblogbar2"</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>nick <span class="op">=</span> <span class="st">"phil"</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>subset <span class="op">=</span> counts.loc[counts[<span class="st">"username"</span>] <span class="op">==</span> counter].copy()</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>replied_by <span class="op">=</span> counts[<span class="st">'username'</span>].loc[subset.index <span class="op">+</span> <span class="dv">1</span>]</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>replied_by.index <span class="op">-=</span> <span class="dv">1</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>subset[<span class="st">'replied_by'</span>] <span class="op">=</span> replied_by</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> pd.concat([subset.groupby(<span class="st">"replied_by"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>),</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>                    subset.groupby(<span class="st">"replying_to"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>)], axis<span class="op">=</span><span class="dv">1</span>).head(<span class="dv">10</span>)</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>Markdown(result.to_markdown(headers<span class="op">=</span>[<span class="st">'Counting partner'</span>, <span class="ss">f'No. of replies by </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>, <span class="ss">f'No. of replies to </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>replied_by <span class="op">=</span> counts[<span class="st">'username'</span>].shift(<span class="op">-</span><span class="dv">1</span>).loc[subset.index]</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>subset[<span class="st">'replied_by'</span>] <span class="op">=</span> replied_by</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> pd.concat([subset.groupby(<span class="st">"replied_by"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>),</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>                    subset.groupby(<span class="st">"replying_to"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>)], axis<span class="op">=</span><span class="dv">1</span>).head(<span class="dv">10</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>Markdown(result.to_markdown(headers<span class="op">=</span>[<span class="st">'Counting partner'</span>, <span class="ss">f'No. of replies by </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>, <span class="ss">f'No. of replies to </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display" data-execution_count="7">
 <div id="tbl-replying" class="anchored">
@@ -647,7 +646,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>Markdown(oldest_counters.<span class="bu">apply</span>(<span class="kw">lambda</span> x: x.dt.date).to_markdown(headers<span class="op">=</span>[<span class="st">"**username**"</span>, <span class="st">"**First Count**"</span>, <span class="st">"**Latest Count**"</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display" data-execution_count="8">
+<div id="tbl-oldest-counters" class="anchored">
 <table class="table table-sm table-striped">
+<caption>Table&nbsp;2: The 10 currently-active counters who’ve been counting for the longest time</caption>
 <thead>
 <tr class="header">
 <th style="text-align: left;"><strong>username</strong></th>
@@ -785,10 +786,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </table>
 </div>
 </div>
+</div>
 </section>
 <section id="gets-and-streaks" class="level1">
 <h1>Gets and streaks</h1>
-<p>Similarly to the oldest counters, we can see what the longest difference between a counter’s first and last get is, and that’s shown on <a href="#tbl-get-delta">Table&nbsp;2</a>. Some counters have been active and getting gets for quite a while!</p>
+<p>Similarly to the oldest counters, we can see what the longest difference between a counter’s first and last get is, and that’s shown on <a href="#tbl-get-delta">Table&nbsp;3</a>. Some counters have been active and getting gets for quite a while!</p>
 <div class="cell" data-execution_count="9">
 <details open="">
 <summary>Code</summary>
@@ -797,7 +799,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell-output cell-output-display" data-execution_count="9">
 <div id="tbl-get-delta" class="anchored">
 <table class="table table-sm table-striped">
-<caption>Table&nbsp;2: The longest differences between the first and last get of r/counting users (1000s of counts)</caption>
+<caption>Table&nbsp;3: The longest differences between the first and last get of r/counting users (1000s of counts)</caption>
 <thead>
 <tr class="header">
 <th style="text-align: left;"><strong>Username</strong></th>
@@ -874,7 +876,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell-output cell-output-display" data-execution_count="10">
 <div id="tbl-streaks" class="anchored">
 <table class="table table-sm table-striped">
-<caption>Table&nbsp;3: The longest streak</caption>
+<caption>Table&nbsp;4: The longest streak</caption>
 <thead>
 <tr class="header">
 <th style="text-align: right;"><strong>Rank</strong></th>
@@ -966,7 +968,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><code>.cumsum()</code> sums up all these True values. The net result is that each get streak is given its own unique number</li>
 <li><code>.groupby()</code> extracts these groups for later use</li>
 </ul>
-<p>The groups are then sorted according to size, and the largest ones are shown in <a href="#tbl-streaks">Table&nbsp;3</a></p>
+<p>The groups are then sorted according to size, and the largest ones are shown in <a href="#tbl-streaks">Table&nbsp;4</a></p>
 
 
 <!-- -->
@@ -1403,63 +1405,64 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb13-142"><a href="#cb13-142" aria-hidden="true" tabindex="-1"></a>counter <span class="op">=</span> <span class="st">"thephilsblogbar2"</span></span>
 <span id="cb13-143"><a href="#cb13-143" aria-hidden="true" tabindex="-1"></a>nick <span class="op">=</span> <span class="st">"phil"</span></span>
 <span id="cb13-144"><a href="#cb13-144" aria-hidden="true" tabindex="-1"></a>subset <span class="op">=</span> counts.loc[counts[<span class="st">"username"</span>] <span class="op">==</span> counter].copy()</span>
-<span id="cb13-145"><a href="#cb13-145" aria-hidden="true" tabindex="-1"></a>replied_by <span class="op">=</span> counts[<span class="st">'username'</span>].loc[subset.index <span class="op">+</span> <span class="dv">1</span>]</span>
-<span id="cb13-146"><a href="#cb13-146" aria-hidden="true" tabindex="-1"></a>replied_by.index <span class="op">-=</span> <span class="dv">1</span></span>
-<span id="cb13-147"><a href="#cb13-147" aria-hidden="true" tabindex="-1"></a>subset[<span class="st">'replied_by'</span>] <span class="op">=</span> replied_by</span>
-<span id="cb13-148"><a href="#cb13-148" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> pd.concat([subset.groupby(<span class="st">"replied_by"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>),</span>
-<span id="cb13-149"><a href="#cb13-149" aria-hidden="true" tabindex="-1"></a>                    subset.groupby(<span class="st">"replying_to"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>)], axis<span class="op">=</span><span class="dv">1</span>).head(<span class="dv">10</span>)</span>
-<span id="cb13-150"><a href="#cb13-150" aria-hidden="true" tabindex="-1"></a>Markdown(result.to_markdown(headers<span class="op">=</span>[<span class="st">'Counting partner'</span>, <span class="ss">f'No. of replies by </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>, <span class="ss">f'No. of replies to </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>]))</span>
-<span id="cb13-151"><a href="#cb13-151" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb13-152"><a href="#cb13-152" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-153"><a href="#cb13-153" aria-hidden="true" tabindex="-1"></a><span class="fu"># Oldest counters</span></span>
-<span id="cb13-154"><a href="#cb13-154" aria-hidden="true" tabindex="-1"></a>We can see who the oldest still-active counters are, where still-active is generously defined as "having made a count within the last six months".</span>
-<span id="cb13-157"><a href="#cb13-157" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb13-158"><a href="#cb13-158" aria-hidden="true" tabindex="-1"></a>cutoff_date <span class="op">=</span> pd.to_datetime(<span class="st">'today'</span>) <span class="op">-</span> pd.Timedelta(<span class="st">'180d'</span>)</span>
-<span id="cb13-159"><a href="#cb13-159" aria-hidden="true" tabindex="-1"></a>active_counters <span class="op">=</span> counts.loc[counts[<span class="st">'date'</span>] <span class="op">&gt;</span> cutoff_date].groupby(<span class="st">"username"</span>).groups.keys()</span>
-<span id="cb13-160"><a href="#cb13-160" aria-hidden="true" tabindex="-1"></a>oldest_counters <span class="op">=</span> counts.loc[counts[<span class="st">'username'</span>].isin(active_counters)].groupby(<span class="st">"username"</span>)[<span class="st">"date"</span>].agg([<span class="bu">min</span>, <span class="bu">max</span>])</span>
-<span id="cb13-161"><a href="#cb13-161" aria-hidden="true" tabindex="-1"></a>oldest_counters <span class="op">=</span> oldest_counters.sort_values(<span class="st">'min'</span>).head(<span class="dv">25</span>)</span>
-<span id="cb13-162"><a href="#cb13-162" aria-hidden="true" tabindex="-1"></a>Markdown(oldest_counters.<span class="bu">apply</span>(<span class="kw">lambda</span> x: x.dt.date).to_markdown(headers<span class="op">=</span>[<span class="st">"**username**"</span>, <span class="st">"**First Count**"</span>, <span class="st">"**Latest Count**"</span>]))</span>
-<span id="cb13-163"><a href="#cb13-163" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb13-164"><a href="#cb13-164" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-165"><a href="#cb13-165" aria-hidden="true" tabindex="-1"></a><span class="fu"># Gets and streaks</span></span>
-<span id="cb13-166"><a href="#cb13-166" aria-hidden="true" tabindex="-1"></a>Similarly to the oldest counters, we can see what the longest difference between a counter's first and last get is, and that's shown on @tbl-get-delta. Some counters have been active and getting gets for quite a while!</span>
-<span id="cb13-167"><a href="#cb13-167" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-170"><a href="#cb13-170" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb13-171"><a href="#cb13-171" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: tbl-get-delta</span></span>
-<span id="cb13-172"><a href="#cb13-172" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: The longest differences between the first and last get of r/counting users (1000s of counts)</span></span>
-<span id="cb13-173"><a href="#cb13-173" aria-hidden="true" tabindex="-1"></a>  Markdown(gets.groupby(<span class="st">'username'</span>).agg(<span class="kw">lambda</span> x: x.index[<span class="op">-</span><span class="dv">1</span>] <span class="op">-</span> x.index[<span class="dv">0</span>]).iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>).head(<span class="dv">10</span>).to_markdown(headers<span class="op">=</span>[<span class="st">"**Username**"</span>, <span class="st">"**Get span**"</span>]))</span>
-<span id="cb13-174"><a href="#cb13-174" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb13-175"><a href="#cb13-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-145"><a href="#cb13-145" aria-hidden="true" tabindex="-1"></a>replied_by <span class="op">=</span> counts[<span class="st">'username'</span>].shift(<span class="op">-</span><span class="dv">1</span>).loc[subset.index]</span>
+<span id="cb13-146"><a href="#cb13-146" aria-hidden="true" tabindex="-1"></a>subset[<span class="st">'replied_by'</span>] <span class="op">=</span> replied_by</span>
+<span id="cb13-147"><a href="#cb13-147" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> pd.concat([subset.groupby(<span class="st">"replied_by"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>),</span>
+<span id="cb13-148"><a href="#cb13-148" aria-hidden="true" tabindex="-1"></a>                    subset.groupby(<span class="st">"replying_to"</span>).count().iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>)], axis<span class="op">=</span><span class="dv">1</span>).head(<span class="dv">10</span>)</span>
+<span id="cb13-149"><a href="#cb13-149" aria-hidden="true" tabindex="-1"></a>Markdown(result.to_markdown(headers<span class="op">=</span>[<span class="st">'Counting partner'</span>, <span class="ss">f'No. of replies by </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>, <span class="ss">f'No. of replies to </span><span class="sc">{</span>nick<span class="sc">}</span><span class="ss">'</span>]))</span>
+<span id="cb13-150"><a href="#cb13-150" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb13-151"><a href="#cb13-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-152"><a href="#cb13-152" aria-hidden="true" tabindex="-1"></a><span class="fu"># Oldest counters</span></span>
+<span id="cb13-153"><a href="#cb13-153" aria-hidden="true" tabindex="-1"></a>We can see who the oldest still-active counters are, where still-active is generously defined as "having made a count within the last six months".</span>
+<span id="cb13-156"><a href="#cb13-156" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb13-157"><a href="#cb13-157" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: tbl-oldest-counters</span></span>
+<span id="cb13-158"><a href="#cb13-158" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: The 10 currently-active counters who've been counting for the longest time</span></span>
+<span id="cb13-159"><a href="#cb13-159" aria-hidden="true" tabindex="-1"></a>cutoff_date <span class="op">=</span> pd.to_datetime(<span class="st">'today'</span>) <span class="op">-</span> pd.Timedelta(<span class="st">'180d'</span>)</span>
+<span id="cb13-160"><a href="#cb13-160" aria-hidden="true" tabindex="-1"></a>active_counters <span class="op">=</span> counts.loc[counts[<span class="st">'date'</span>] <span class="op">&gt;</span> cutoff_date].groupby(<span class="st">"username"</span>).groups.keys()</span>
+<span id="cb13-161"><a href="#cb13-161" aria-hidden="true" tabindex="-1"></a>oldest_counters <span class="op">=</span> counts.loc[counts[<span class="st">'username'</span>].isin(active_counters)].groupby(<span class="st">"username"</span>)[<span class="st">"date"</span>].agg([<span class="bu">min</span>, <span class="bu">max</span>])</span>
+<span id="cb13-162"><a href="#cb13-162" aria-hidden="true" tabindex="-1"></a>oldest_counters <span class="op">=</span> oldest_counters.sort_values(<span class="st">'min'</span>).head(<span class="dv">25</span>)</span>
+<span id="cb13-163"><a href="#cb13-163" aria-hidden="true" tabindex="-1"></a>Markdown(oldest_counters.<span class="bu">apply</span>(<span class="kw">lambda</span> x: x.dt.date).to_markdown(headers<span class="op">=</span>[<span class="st">"**username**"</span>, <span class="st">"**First Count**"</span>, <span class="st">"**Latest Count**"</span>]))</span>
+<span id="cb13-164"><a href="#cb13-164" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb13-165"><a href="#cb13-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-166"><a href="#cb13-166" aria-hidden="true" tabindex="-1"></a><span class="fu"># Gets and streaks</span></span>
+<span id="cb13-167"><a href="#cb13-167" aria-hidden="true" tabindex="-1"></a>Similarly to the oldest counters, we can see what the longest difference between a counter's first and last get is, and that's shown on @tbl-get-delta. Some counters have been active and getting gets for quite a while!</span>
+<span id="cb13-168"><a href="#cb13-168" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-171"><a href="#cb13-171" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb13-172"><a href="#cb13-172" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: tbl-get-delta</span></span>
+<span id="cb13-173"><a href="#cb13-173" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: The longest differences between the first and last get of r/counting users (1000s of counts)</span></span>
+<span id="cb13-174"><a href="#cb13-174" aria-hidden="true" tabindex="-1"></a>  Markdown(gets.groupby(<span class="st">'username'</span>).agg(<span class="kw">lambda</span> x: x.index[<span class="op">-</span><span class="dv">1</span>] <span class="op">-</span> x.index[<span class="dv">0</span>]).iloc[:, <span class="dv">0</span>].sort_values(ascending<span class="op">=</span><span class="va">False</span>).head(<span class="dv">10</span>).to_markdown(headers<span class="op">=</span>[<span class="st">"**Username**"</span>, <span class="st">"**Get span**"</span>]))</span>
+<span id="cb13-175"><a href="#cb13-175" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb13-176"><a href="#cb13-176" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-177"><a href="#cb13-177" aria-hidden="true" tabindex="-1"></a>We can also calculate what the longest get streaks are.</span>
-<span id="cb13-180"><a href="#cb13-180" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb13-181"><a href="#cb13-181" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: tbl-streaks</span></span>
-<span id="cb13-182"><a href="#cb13-182" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: The longest streak</span></span>
-<span id="cb13-183"><a href="#cb13-183" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> gets[<span class="st">'username'</span>]</span>
-<span id="cb13-184"><a href="#cb13-184" aria-hidden="true" tabindex="-1"></a>groups <span class="op">=</span> gets.groupby((y <span class="op">!=</span> y.shift()).cumsum())</span>
-<span id="cb13-185"><a href="#cb13-185" aria-hidden="true" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">'username'</span>, <span class="st">'submission_id'</span>, <span class="st">'basecount'</span>]</span>
-<span id="cb13-186"><a href="#cb13-186" aria-hidden="true" tabindex="-1"></a>length <span class="op">=</span> <span class="dv">10</span></span>
-<span id="cb13-187"><a href="#cb13-187" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-188"><a href="#cb13-188" aria-hidden="true" tabindex="-1"></a>indices <span class="op">=</span> (<span class="op">-</span>groups.size()).sort_values(kind<span class="op">=</span><span class="st">'mergesort'</span>).index</span>
-<span id="cb13-189"><a href="#cb13-189" aria-hidden="true" tabindex="-1"></a>old <span class="op">=</span> groups.first().loc[indices, columns]</span>
-<span id="cb13-190"><a href="#cb13-190" aria-hidden="true" tabindex="-1"></a>new <span class="op">=</span> groups.last().loc[indices, columns]</span>
-<span id="cb13-191"><a href="#cb13-191" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> old.join(new, rsuffix<span class="op">=</span><span class="st">'_new'</span>)</span>
-<span id="cb13-192"><a href="#cb13-192" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> combined.loc[<span class="op">~</span>combined[<span class="st">'username'</span>].<span class="bu">apply</span>(counters.is_banned_counter)].head(length).reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb13-193"><a href="#cb13-193" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'old_link'</span>] <span class="op">=</span> combined.<span class="bu">apply</span>(<span class="kw">lambda</span> x: <span class="ss">f'[</span><span class="sc">{</span><span class="bu">int</span>(x.basecount <span class="op">/</span> <span class="dv">1000</span>) <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">K](https://reddit.com/comments/</span><span class="sc">{</span>x<span class="sc">.</span>submission_id<span class="sc">}</span><span class="ss">/)'</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb13-194"><a href="#cb13-194" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'new_link'</span>] <span class="op">=</span> combined.<span class="bu">apply</span>(<span class="kw">lambda</span> x: <span class="ss">f'[</span><span class="sc">{</span><span class="bu">int</span>(x.basecount_new <span class="op">/</span> <span class="dv">1000</span>) <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">K](https://reddit.com/comments/</span><span class="sc">{</span>x<span class="sc">.</span>submission_id_new<span class="sc">}</span><span class="ss">/)'</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb13-195"><a href="#cb13-195" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'streak'</span>] <span class="op">=</span> <span class="dv">1</span> <span class="op">+</span> (combined[<span class="st">'basecount_new'</span>] <span class="op">-</span> combined[<span class="st">'basecount'</span>]) <span class="op">//</span> <span class="dv">1000</span></span>
-<span id="cb13-196"><a href="#cb13-196" aria-hidden="true" tabindex="-1"></a>combined.index <span class="op">+=</span> <span class="dv">1</span></span>
-<span id="cb13-197"><a href="#cb13-197" aria-hidden="true" tabindex="-1"></a>combined.index.name <span class="op">=</span> <span class="st">"Rank"</span></span>
-<span id="cb13-198"><a href="#cb13-198" aria-hidden="true" tabindex="-1"></a>Markdown(combined[[<span class="st">'username'</span>, <span class="st">'old_link'</span>, <span class="st">'new_link'</span>, <span class="st">'streak'</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">'**Rank**'</span>, <span class="st">'**username**'</span>, <span class="st">'**First Get**'</span>, <span class="st">'**Last Get**'</span>, <span class="st">'**Streak Length**'</span>]))</span>
-<span id="cb13-199"><a href="#cb13-199" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb13-200"><a href="#cb13-200" aria-hidden="true" tabindex="-1"></a> The core of the extraction is the line that says <span class="in">`groups = gets.groupby((y != y.shift()).cumsum())`</span>. Let's unpack it:</span>
-<span id="cb13-201"><a href="#cb13-201" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-202"><a href="#cb13-202" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`y != y.shift()`</span> assigns a value of True to all threads with a username that's different from their predecessor</span>
-<span id="cb13-203"><a href="#cb13-203" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.cumsum()`</span> sums up all these True values. The net result is that each get streak is given its own unique number</span>
-<span id="cb13-204"><a href="#cb13-204" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.groupby()`</span> extracts these groups for later use</span>
-<span id="cb13-205"><a href="#cb13-205" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-206"><a href="#cb13-206" aria-hidden="true" tabindex="-1"></a>The groups are then sorted according to size, and the largest ones are shown in @tbl-streaks</span>
-<span id="cb13-207"><a href="#cb13-207" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-177"><a href="#cb13-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-178"><a href="#cb13-178" aria-hidden="true" tabindex="-1"></a>We can also calculate what the longest get streaks are.</span>
+<span id="cb13-181"><a href="#cb13-181" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb13-182"><a href="#cb13-182" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: tbl-streaks</span></span>
+<span id="cb13-183"><a href="#cb13-183" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: The longest streak</span></span>
+<span id="cb13-184"><a href="#cb13-184" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> gets[<span class="st">'username'</span>]</span>
+<span id="cb13-185"><a href="#cb13-185" aria-hidden="true" tabindex="-1"></a>groups <span class="op">=</span> gets.groupby((y <span class="op">!=</span> y.shift()).cumsum())</span>
+<span id="cb13-186"><a href="#cb13-186" aria-hidden="true" tabindex="-1"></a>columns <span class="op">=</span> [<span class="st">'username'</span>, <span class="st">'submission_id'</span>, <span class="st">'basecount'</span>]</span>
+<span id="cb13-187"><a href="#cb13-187" aria-hidden="true" tabindex="-1"></a>length <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb13-188"><a href="#cb13-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-189"><a href="#cb13-189" aria-hidden="true" tabindex="-1"></a>indices <span class="op">=</span> (<span class="op">-</span>groups.size()).sort_values(kind<span class="op">=</span><span class="st">'mergesort'</span>).index</span>
+<span id="cb13-190"><a href="#cb13-190" aria-hidden="true" tabindex="-1"></a>old <span class="op">=</span> groups.first().loc[indices, columns]</span>
+<span id="cb13-191"><a href="#cb13-191" aria-hidden="true" tabindex="-1"></a>new <span class="op">=</span> groups.last().loc[indices, columns]</span>
+<span id="cb13-192"><a href="#cb13-192" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> old.join(new, rsuffix<span class="op">=</span><span class="st">'_new'</span>)</span>
+<span id="cb13-193"><a href="#cb13-193" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> combined.loc[<span class="op">~</span>combined[<span class="st">'username'</span>].<span class="bu">apply</span>(counters.is_banned_counter)].head(length).reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb13-194"><a href="#cb13-194" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'old_link'</span>] <span class="op">=</span> combined.<span class="bu">apply</span>(<span class="kw">lambda</span> x: <span class="ss">f'[</span><span class="sc">{</span><span class="bu">int</span>(x.basecount <span class="op">/</span> <span class="dv">1000</span>) <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">K](https://reddit.com/comments/</span><span class="sc">{</span>x<span class="sc">.</span>submission_id<span class="sc">}</span><span class="ss">/)'</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb13-195"><a href="#cb13-195" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'new_link'</span>] <span class="op">=</span> combined.<span class="bu">apply</span>(<span class="kw">lambda</span> x: <span class="ss">f'[</span><span class="sc">{</span><span class="bu">int</span>(x.basecount_new <span class="op">/</span> <span class="dv">1000</span>) <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">K](https://reddit.com/comments/</span><span class="sc">{</span>x<span class="sc">.</span>submission_id_new<span class="sc">}</span><span class="ss">/)'</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb13-196"><a href="#cb13-196" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'streak'</span>] <span class="op">=</span> <span class="dv">1</span> <span class="op">+</span> (combined[<span class="st">'basecount_new'</span>] <span class="op">-</span> combined[<span class="st">'basecount'</span>]) <span class="op">//</span> <span class="dv">1000</span></span>
+<span id="cb13-197"><a href="#cb13-197" aria-hidden="true" tabindex="-1"></a>combined.index <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb13-198"><a href="#cb13-198" aria-hidden="true" tabindex="-1"></a>combined.index.name <span class="op">=</span> <span class="st">"Rank"</span></span>
+<span id="cb13-199"><a href="#cb13-199" aria-hidden="true" tabindex="-1"></a>Markdown(combined[[<span class="st">'username'</span>, <span class="st">'old_link'</span>, <span class="st">'new_link'</span>, <span class="st">'streak'</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">'**Rank**'</span>, <span class="st">'**username**'</span>, <span class="st">'**First Get**'</span>, <span class="st">'**Last Get**'</span>, <span class="st">'**Streak Length**'</span>]))</span>
+<span id="cb13-200"><a href="#cb13-200" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb13-201"><a href="#cb13-201" aria-hidden="true" tabindex="-1"></a> The core of the extraction is the line that says <span class="in">`groups = gets.groupby((y != y.shift()).cumsum())`</span>. Let's unpack it:</span>
+<span id="cb13-202"><a href="#cb13-202" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-203"><a href="#cb13-203" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`y != y.shift()`</span> assigns a value of True to all threads with a username that's different from their predecessor</span>
+<span id="cb13-204"><a href="#cb13-204" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.cumsum()`</span> sums up all these True values. The net result is that each get streak is given its own unique number</span>
+<span id="cb13-205"><a href="#cb13-205" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.groupby()`</span> extracts these groups for later use</span>
+<span id="cb13-206"><a href="#cb13-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-207"><a href="#cb13-207" aria-hidden="true" tabindex="-1"></a>The groups are then sorted according to size, and the largest ones are shown in @tbl-streaks</span>
+<span id="cb13-208"><a href="#cb13-208" aria-hidden="true" tabindex="-1"></a></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
