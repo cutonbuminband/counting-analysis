@@ -1,3 +1,4 @@
 credentials.ini
 .venv
 /.quarto/
+/_site/
