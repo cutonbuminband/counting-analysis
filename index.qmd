@@ -3,10 +3,10 @@ title: "Analysing rcounting data"
 ---
 This page highlights some of the initial analysis I've done of the counts made on [r/counting](reddit.com/r/counting). To do this, I use the database of all counts that was put together by u/davidjl123 and u/Countletics (and others!), as modified by me. For more niche analysis, see some of the other pages on the sidebar on the left. Most of the figures and tables here have also been posted on the subreddit, but I wanted to have them in a central place. I also liked being able to show the code and the tables or figures it generates in the same document, so that people can see both. Some of it isn't particularly interesting, so I've hidden it behind a code widget. You can unfold it just by clicking.
 
-The idea of this page is also that I'll try and keep the analysis current as more counts come in, while the other pages might slowly grow stale
+The idea of this page is also that I'll try and keep the analysis current as more counts come in, while the other pages might slowly grow stale.
 
 # Imports and initialization
-We'll start with some imports, after which we can connect to the database of couts
+We'll start with some imports, after which we can connect to the database of counts
 
 ```{python}
 #| code-fold: true
@@ -137,11 +137,13 @@ Markdown(result.to_markdown(headers=['Counting partner', f'No. of replies by {ni
 ```
 
 # Oldest counters
-We can see who the oldest still-active counters are
+We can see who the oldest still-active counters are, where still-active is generously defined as "having made a count within the last six months".
 ```{python}
 cutoff_date = pd.to_datetime('today') - pd.Timedelta('180d')
 active_counters = counts.loc[counts['date'] > cutoff_date].groupby("username").groups.keys()
-Markdown(counts.loc[counts['username'].isin(active_counters)].groupby("username")["date"].min().sort_values().head(20).apply(str).to_markdown(headers=["**Username**", "**First Count**"]))
+oldest_counters = counts.loc[counts['username'].isin(active_counters)].groupby("username")["date"].agg([min, max])
+oldest_counters = oldest_counters.sort_values('min').head(20)
+Markdown(oldest_counters.apply(lambda x: x.dt.date).to_markdown(headers=["**username**", "**First Count**", "**Latest Count**"]))
 ```
 
 # Gets and streaks
