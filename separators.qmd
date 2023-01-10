@@ -61,7 +61,6 @@ Once we have the data, we can get a 14-day rolling average, and resample the poi
 ```{python}
 #| label: fig-separators
 #| fig-cap: The separators used on r/counting over time
-#| column: body-outset
 resampled = (data[['is_comma_separated', 'is_space_separated', 'no_separators']].rolling('14d').mean().resample('6h').mean() * 100)
 fig, ax = plt.subplots(1)
 resampled.plot(ax=ax, ylabel='Percentage of counts', lw=2)
