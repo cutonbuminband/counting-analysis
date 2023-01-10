@@ -22,7 +22,7 @@ sns.set_theme()
 from IPython.display import Markdown
 data_directory = Path("../data/")
 db = sqlite3.connect(data_directory / "counting.sqlite")
-df = pd.read_sql("select counters.canonical_username as username, timestamp, submission_id from comments join counters on comments.username=counters.username where comments.position > 0 order by timestamp", db)
+df = pd.read_sql("select counters.canonical_username as username, timestamp, comment_id from comments join counters on comments.username=counters.username where comments.position > 0 order by timestamp", db)
 ```
 Looking at the longest runs by total number of counts in the run is more interesting. so let's do that. We take all our ordered counts and shift them by two; if the two authors are different, that means one streak has ended and a new one started. Taking the cumulative sum of all these changes means that each run is assigned the same number; exactly what we want. @tbl-runs shows the top ten runs in r/counting history, as well as their total length.^[I haven't checked through all of them, but it's likely all the lengths are off by one. That's because I've forced every comment to be part of only one run, but the first comment in each run should simultaneously be the last comment in the previous run.]:
 
@@ -43,14 +43,15 @@ old['length'] = groups.size().loc[indices]
 combined = old.join(new, rsuffix='2', lsuffix='1')
 combined['dt'] = (combined['timestamp2'] - combined['timestamp1']) / units.HOUR
 combined.drop(['timestamp1', 'timestamp2'], axis=1, inplace=True)
-def link(submission):
-    body, comment = pd.read_sql(f"select body, comment_id from comments where submission_id == '{submission}' order by timestamp desc limit 1", db).iloc[0]
-    return f"[{parsing.strip_markdown_links(body)}](/comments/{submission}/_/{comment})"
+
+def link(comment):
+    body, submission = pd.read_sql(f"select body, comment_id from comments where comment_id == '{comment}' order by timestamp desc limit 1", db).iloc[0]
+    return f"[{parsing.find_count_in_text(body):,}](/comments/{submission}/_/{comment})"
 
 final = combined.head(10).reset_index(drop=True).copy()
 
-final["old_link"] = final["submission_id1"].apply(link)
-final["new_link"] = final["submission_id2"].apply(link)
+final["old_link"] = final["comment_id1"].apply(link)
+final["new_link"] = final["comment_id2"].apply(link)
 final.index += 1
 def format_time(timedelta):
     hours, rem = divmod(timedelta.total_seconds(), 3600)
