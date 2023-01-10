@@ -231,7 +231,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> Markdown</span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>data_directory <span class="op">=</span> Path(<span class="st">"../data/"</span>)</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> sqlite3.<span class="ex">connect</span>(data_directory <span class="op">/</span> <span class="st">"counting.sqlite"</span>)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_sql(<span class="st">"select counters.canonical_username as username, timestamp, submission_id from comments join counters on comments.username=counters.username where comments.position &gt; 0 order by timestamp"</span>, db)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_sql(<span class="st">"select counters.canonical_username as username, timestamp, comment_id from comments join counters on comments.username=counters.username where comments.position &gt; 0 order by timestamp"</span>, db)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="page-columns page-full"><p>Looking at the longest runs by total number of counts in the run is more interesting. so let’s do that. We take all our ordered counts and shift them by two; if the two authors are different, that means one streak has ended and a new one started. Taking the cumulative sum of all these changes means that each run is assigned the same number; exactly what we want. <a href="#tbl-runs">Table&nbsp;1</a> shows the top ten runs in r/counting history, as well as their total length.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>:</p><div class="no-row-height column-margin column-container"><li id="fn2"><p><sup>2</sup>&nbsp;I haven’t checked through all of them, but it’s likely all the lengths are off by one. That’s because I’ve forced every comment to be part of only one run, but the first comment in each run should simultaneously be the last comment in the previous run.</p></li></div></div>
@@ -248,21 +248,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> old.join(new, rsuffix<span class="op">=</span><span class="st">'2'</span>, lsuffix<span class="op">=</span><span class="st">'1'</span>)</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'dt'</span>] <span class="op">=</span> (combined[<span class="st">'timestamp2'</span>] <span class="op">-</span> combined[<span class="st">'timestamp1'</span>]) <span class="op">/</span> units.HOUR</span>
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>combined.drop([<span class="st">'timestamp1'</span>, <span class="st">'timestamp2'</span>], axis<span class="op">=</span><span class="dv">1</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> link(submission):</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    body, comment <span class="op">=</span> pd.read_sql(<span class="ss">f"select body, comment_id from comments where submission_id == '</span><span class="sc">{</span>submission<span class="sc">}</span><span class="ss">' order by timestamp desc limit 1"</span>, db).iloc[<span class="dv">0</span>]</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"[</span><span class="sc">{</span>parsing<span class="sc">.</span>strip_markdown_links(body)<span class="sc">}</span><span class="ss">](/comments/</span><span class="sc">{</span>submission<span class="sc">}</span><span class="ss">/_/</span><span class="sc">{</span>comment<span class="sc">}</span><span class="ss">)"</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>final <span class="op">=</span> combined.head(<span class="dv">10</span>).reset_index(drop<span class="op">=</span><span class="va">True</span>).copy()</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"old_link"</span>] <span class="op">=</span> final[<span class="st">"submission_id1"</span>].<span class="bu">apply</span>(link)</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"new_link"</span>] <span class="op">=</span> final[<span class="st">"submission_id2"</span>].<span class="bu">apply</span>(link)</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>final.index <span class="op">+=</span> <span class="dv">1</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> format_time(timedelta):</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    hours, rem <span class="op">=</span> <span class="bu">divmod</span>(timedelta.total_seconds(), <span class="dv">3600</span>)</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    minutes, seconds <span class="op">=</span> <span class="bu">divmod</span>(rem, <span class="dv">60</span>)</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"</span><span class="sc">{</span><span class="bu">int</span>(hours)<span class="sc">:0&gt;2}</span><span class="ss">:</span><span class="sc">{</span><span class="bu">int</span>(minutes)<span class="sc">:0&gt;2}</span><span class="ss">"</span></span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>final[<span class="st">'dt'</span>] <span class="op">=</span> pd.to_timedelta(final[<span class="st">'dt'</span>], unit<span class="op">=</span><span class="st">'h'</span>).<span class="bu">round</span>(<span class="st">'s'</span>).<span class="bu">apply</span>(format_time)</span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>Markdown(final[[<span class="st">'username1'</span>, <span class="st">'username2'</span>, <span class="st">'old_link'</span>, <span class="st">'new_link'</span>, <span class="st">'length'</span>, <span class="st">'dt'</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">'**Rank**'</span>, <span class="st">'**1st counter**'</span>, <span class="st">'**2nd counter**'</span>, <span class="st">'**Start**'</span>, <span class="st">'**End**'</span>, <span class="st">'**Length**'</span>, <span class="st">'**Duration**'</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> link(comment):</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    body, submission <span class="op">=</span> pd.read_sql(<span class="ss">f"select body, comment_id from comments where comment_id == '</span><span class="sc">{</span>comment<span class="sc">}</span><span class="ss">' order by timestamp desc limit 1"</span>, db).iloc[<span class="dv">0</span>]</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"[</span><span class="sc">{</span>parsing<span class="sc">.</span>find_count_in_text(body)<span class="sc">:,}</span><span class="ss">](/comments/</span><span class="sc">{</span>submission<span class="sc">}</span><span class="ss">/_/</span><span class="sc">{</span>comment<span class="sc">}</span><span class="ss">)"</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>final <span class="op">=</span> combined.head(<span class="dv">10</span>).reset_index(drop<span class="op">=</span><span class="va">True</span>).copy()</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"old_link"</span>] <span class="op">=</span> final[<span class="st">"comment_id1"</span>].<span class="bu">apply</span>(link)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"new_link"</span>] <span class="op">=</span> final[<span class="st">"comment_id2"</span>].<span class="bu">apply</span>(link)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>final.index <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> format_time(timedelta):</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    hours, rem <span class="op">=</span> <span class="bu">divmod</span>(timedelta.total_seconds(), <span class="dv">3600</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    minutes, seconds <span class="op">=</span> <span class="bu">divmod</span>(rem, <span class="dv">60</span>)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"</span><span class="sc">{</span><span class="bu">int</span>(hours)<span class="sc">:0&gt;2}</span><span class="ss">:</span><span class="sc">{</span><span class="bu">int</span>(minutes)<span class="sc">:0&gt;2}</span><span class="ss">"</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>final[<span class="st">'dt'</span>] <span class="op">=</span> pd.to_timedelta(final[<span class="st">'dt'</span>], unit<span class="op">=</span><span class="st">'h'</span>).<span class="bu">round</span>(<span class="st">'s'</span>).<span class="bu">apply</span>(format_time)</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>Markdown(final[[<span class="st">'username1'</span>, <span class="st">'username2'</span>, <span class="st">'old_link'</span>, <span class="st">'new_link'</span>, <span class="st">'length'</span>, <span class="st">'dt'</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">'**Rank**'</span>, <span class="st">'**1st counter**'</span>, <span class="st">'**2nd counter**'</span>, <span class="st">'**Start**'</span>, <span class="st">'**End**'</span>, <span class="st">'**Length**'</span>, <span class="st">'**Duration**'</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display column-body-outset" data-execution_count="2">
 <div id="tbl-runs" class="anchored">
 <table class="table table-sm table-striped">
@@ -283,8 +284,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">1</td>
 <td style="text-align: left;">davidjl123</td>
 <td style="text-align: left;">Countletics</td>
-<td style="text-align: left;"><a href="./comments/dkt3pu/_/f4jmm3h">3,038,000</a></td>
-<td style="text-align: left;"><a href="./comments/dkuzhq/_/f4k1nyw">3,045,000</a></td>
+<td style="text-align: left;"><a href="./comments/f4jjzxr/_/f4jjzxr">3,037,002</a></td>
+<td style="text-align: left;"><a href="./comments/f4k071l/_/f4k071l">3,044,030</a></td>
 <td style="text-align: right;">7029</td>
 <td style="text-align: left;">02:44</td>
 </tr>
@@ -292,8 +293,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">2</td>
 <td style="text-align: left;">davidjl123</td>
 <td style="text-align: left;">Countletics</td>
-<td style="text-align: left;"><a href="./comments/dzb3dv/_/f86h2en">3 191 000</a></td>
-<td style="text-align: left;"><a href="./comments/dzcq8o/_/f86slyz">3 196 000</a></td>
+<td style="text-align: left;"><a href="./comments/f86ez5c/_/f86ez5c">3,190,001</a></td>
+<td style="text-align: left;"><a href="./comments/f86qesn/_/f86qesn">3,195,027</a></td>
 <td style="text-align: right;">5027</td>
 <td style="text-align: left;">02:11</td>
 </tr>
@@ -301,8 +302,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">3</td>
 <td style="text-align: left;">Countletics</td>
 <td style="text-align: left;">davidjl123</td>
-<td style="text-align: left;"><a href="./comments/dn7c46/_/f58gyiu">3 102 000</a></td>
-<td style="text-align: left;"><a href="./comments/dn8gbu/_/f58qstr">3 106 000</a></td>
+<td style="text-align: left;"><a href="./comments/f58er61/_/f58er61">3,101,028</a></td>
+<td style="text-align: left;"><a href="./comments/f58q9pg/_/f58q9pg">3,105,791</a></td>
 <td style="text-align: right;">4764</td>
 <td style="text-align: left;">01:54</td>
 </tr>
@@ -310,8 +311,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">4</td>
 <td style="text-align: left;">Countletics</td>
 <td style="text-align: left;">davidjl123</td>
-<td style="text-align: left;"><a href="./comments/dlpshy/_/f4tahfn">3 073 000</a></td>
-<td style="text-align: left;"><a href="./comments/dlr7my/_/f4tqg9r">3 077 000</a></td>
+<td style="text-align: left;"><a href="./comments/f4t6ge6/_/f4t6ge6">3,072,012</a></td>
+<td style="text-align: left;"><a href="./comments/f4tnzhz/_/f4tnzhz">3,076,715</a></td>
 <td style="text-align: right;">4704</td>
 <td style="text-align: left;">01:56</td>
 </tr>
@@ -319,8 +320,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">5</td>
 <td style="text-align: left;">Countletics</td>
 <td style="text-align: left;">davidjl123</td>
-<td style="text-align: left;"><a href="./comments/dzvivo/_/f8agik6">3,202,000</a></td>
-<td style="text-align: left;"><a href="./comments/dzweka/_/f8alozt">3,205,000</a></td>
+<td style="text-align: left;"><a href="./comments/f8aeokr/_/f8aeokr">3,201,005</a></td>
+<td style="text-align: left;"><a href="./comments/f8alozt/_/f8alozt">3,205,000</a></td>
 <td style="text-align: right;">3996</td>
 <td style="text-align: left;">01:41</td>
 </tr>
@@ -328,8 +329,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">6</td>
 <td style="text-align: left;">Countletics</td>
 <td style="text-align: left;">davidjl123</td>
-<td style="text-align: left;"><a href="./comments/dmo0fq/_/f53grgh">3 091 000</a></td>
-<td style="text-align: left;"><a href="./comments/dmpvbd/_/f540fr6">3 095 000</a></td>
+<td style="text-align: left;"><a href="./comments/f53cuye/_/f53cuye">3,090,222</a></td>
+<td style="text-align: left;"><a href="./comments/f53vf3j/_/f53vf3j">3,094,002</a></td>
 <td style="text-align: right;">3781</td>
 <td style="text-align: left;">01:45</td>
 </tr>
@@ -337,8 +338,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">7</td>
 <td style="text-align: left;">Countletics</td>
 <td style="text-align: left;">davidjl123</td>
-<td style="text-align: left;"><a href="./comments/dlachb/_/f4oucub">3 065 000</a></td>
-<td style="text-align: left;"><a href="./comments/dlbokj/_/f4rb9l9">3,069,000</a></td>
+<td style="text-align: left;"><a href="./comments/f4ospyw/_/f4ospyw">3,064,318</a></td>
+<td style="text-align: left;"><a href="./comments/f4p1eke/_/f4p1eke">3,068,003</a></td>
 <td style="text-align: right;">3686</td>
 <td style="text-align: left;">01:37</td>
 </tr>
@@ -346,8 +347,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">8</td>
 <td style="text-align: left;">Countletics</td>
 <td style="text-align: left;">LeMinerWithCheese</td>
-<td style="text-align: left;"><a href="./comments/s23sey/_/hsfct3h">4,570,000</a></td>
-<td style="text-align: left;"><a href="./comments/s2ojr8/_/hsfy5n3">4,573,000</a></td>
+<td style="text-align: left;"><a href="./comments/hsf91d2/_/hsf91d2">4,569,377</a></td>
+<td style="text-align: left;"><a href="./comments/hsfuig5/_/hsfuig5">4,572,402</a></td>
 <td style="text-align: right;">3026</td>
 <td style="text-align: left;">02:43</td>
 </tr>
@@ -355,8 +356,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">9</td>
 <td style="text-align: left;">Antichess</td>
 <td style="text-align: left;">Countletics</td>
-<td style="text-align: left;"><a href="./comments/mpo4w5/_/gubhy7b">4,219,000</a></td>
-<td style="text-align: left;"><a href="./comments/mpsiev/_/gude695">4,222,000</a></td>
+<td style="text-align: left;"><a href="./comments/gubepvu/_/gubepvu">4,218,058</a></td>
+<td style="text-align: left;"><a href="./comments/gubpcui/_/gubpcui">4,221,003</a></td>
 <td style="text-align: right;">2946</td>
 <td style="text-align: left;">01:31</td>
 </tr>
@@ -364,8 +365,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td style="text-align: right;">10</td>
 <td style="text-align: left;">davidjl123</td>
 <td style="text-align: left;">GarlicoinAccount</td>
-<td style="text-align: left;"><a href="./comments/i3r463/_/g0dqo76">4029000</a></td>
-<td style="text-align: left;"><a href="./comments/i3upd9/_/g0e7yue">4032000</a></td>
+<td style="text-align: left;"><a href="./comments/g0dmtoe/_/g0dmtoe">4,028,324</a></td>
+<td style="text-align: left;"><a href="./comments/g0e3jmq/_/g0e3jmq">4,031,002</a></td>
 <td style="text-align: right;">2679</td>
 <td style="text-align: left;">02:22</td>
 </tr>
@@ -705,7 +706,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> Markdown</span>
 <span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>data_directory <span class="op">=</span> Path(<span class="st">"../data/"</span>)</span>
 <span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> sqlite3.<span class="ex">connect</span>(data_directory <span class="op">/</span> <span class="st">"counting.sqlite"</span>)</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_sql(<span class="st">"select counters.canonical_username as username, timestamp, submission_id from comments join counters on comments.username=counters.username where comments.position &gt; 0 order by timestamp"</span>, db)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_sql(<span class="st">"select counters.canonical_username as username, timestamp, comment_id from comments join counters on comments.username=counters.username where comments.position &gt; 0 order by timestamp"</span>, db)</span>
 <span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>Looking at the longest runs by total number of counts in the run is more interesting. so let's do that. We take all our ordered counts and shift them by two; if the two authors are different, that means one streak has ended and a new one started. Taking the cumulative sum of all these changes means that each run is assigned the same number; exactly what we want. @tbl-runs shows the top ten runs in r/counting history, as well as their total length.^<span class="co">[</span><span class="ot">I haven't checked through all of them, but it's likely all the lengths are off by one. That's because I've forced every comment to be part of only one run, but the first comment in each run should simultaneously be the last comment in the previous run.</span><span class="co">]</span>:</span>
 <span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a></span>
@@ -726,23 +727,24 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> old.join(new, rsuffix<span class="op">=</span><span class="st">'2'</span>, lsuffix<span class="op">=</span><span class="st">'1'</span>)</span>
 <span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>combined[<span class="st">'dt'</span>] <span class="op">=</span> (combined[<span class="st">'timestamp2'</span>] <span class="op">-</span> combined[<span class="st">'timestamp1'</span>]) <span class="op">/</span> units.HOUR</span>
 <span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>combined.drop([<span class="st">'timestamp1'</span>, <span class="st">'timestamp2'</span>], axis<span class="op">=</span><span class="dv">1</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> link(submission):</span>
-<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>    body, comment <span class="op">=</span> pd.read_sql(<span class="ss">f"select body, comment_id from comments where submission_id == '</span><span class="sc">{</span>submission<span class="sc">}</span><span class="ss">' order by timestamp desc limit 1"</span>, db).iloc[<span class="dv">0</span>]</span>
-<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"[</span><span class="sc">{</span>parsing<span class="sc">.</span>strip_markdown_links(body)<span class="sc">}</span><span class="ss">](/comments/</span><span class="sc">{</span>submission<span class="sc">}</span><span class="ss">/_/</span><span class="sc">{</span>comment<span class="sc">}</span><span class="ss">)"</span></span>
-<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>final <span class="op">=</span> combined.head(<span class="dv">10</span>).reset_index(drop<span class="op">=</span><span class="va">True</span>).copy()</span>
-<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"old_link"</span>] <span class="op">=</span> final[<span class="st">"submission_id1"</span>].<span class="bu">apply</span>(link)</span>
-<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"new_link"</span>] <span class="op">=</span> final[<span class="st">"submission_id2"</span>].<span class="bu">apply</span>(link)</span>
-<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>final.index <span class="op">+=</span> <span class="dv">1</span></span>
-<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> format_time(timedelta):</span>
-<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>    hours, rem <span class="op">=</span> <span class="bu">divmod</span>(timedelta.total_seconds(), <span class="dv">3600</span>)</span>
-<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>    minutes, seconds <span class="op">=</span> <span class="bu">divmod</span>(rem, <span class="dv">60</span>)</span>
-<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"</span><span class="sc">{</span><span class="bu">int</span>(hours)<span class="sc">:0&gt;2}</span><span class="ss">:</span><span class="sc">{</span><span class="bu">int</span>(minutes)<span class="sc">:0&gt;2}</span><span class="ss">"</span></span>
-<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>final[<span class="st">'dt'</span>] <span class="op">=</span> pd.to_timedelta(final[<span class="st">'dt'</span>], unit<span class="op">=</span><span class="st">'h'</span>).<span class="bu">round</span>(<span class="st">'s'</span>).<span class="bu">apply</span>(format_time)</span>
-<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>Markdown(final[[<span class="st">'username1'</span>, <span class="st">'username2'</span>, <span class="st">'old_link'</span>, <span class="st">'new_link'</span>, <span class="st">'length'</span>, <span class="st">'dt'</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">'**Rank**'</span>, <span class="st">'**1st counter**'</span>, <span class="st">'**2nd counter**'</span>, <span class="st">'**Start**'</span>, <span class="st">'**End**'</span>, <span class="st">'**Length**'</span>, <span class="st">'**Duration**'</span>]))</span>
-<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>The first seven runs are by u/davidjl123 and u/Countletics in the early 3Ms, and all of the top ten involve either david or countletics. The first one which doesn't either of them is number 17 between nonsensy and colby6666, starting at <span class="co">[</span><span class="ot">3,456,003</span><span class="co">](/comments/erw1rp/_/ff66e1r)</span> and continuing for 2000 counts.</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> link(comment):</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>    body, submission <span class="op">=</span> pd.read_sql(<span class="ss">f"select body, comment_id from comments where comment_id == '</span><span class="sc">{</span>comment<span class="sc">}</span><span class="ss">' order by timestamp desc limit 1"</span>, db).iloc[<span class="dv">0</span>]</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"[</span><span class="sc">{</span>parsing<span class="sc">.</span>find_count_in_text(body)<span class="sc">:,}</span><span class="ss">](/comments/</span><span class="sc">{</span>submission<span class="sc">}</span><span class="ss">/_/</span><span class="sc">{</span>comment<span class="sc">}</span><span class="ss">)"</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>final <span class="op">=</span> combined.head(<span class="dv">10</span>).reset_index(drop<span class="op">=</span><span class="va">True</span>).copy()</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"old_link"</span>] <span class="op">=</span> final[<span class="st">"comment_id1"</span>].<span class="bu">apply</span>(link)</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>final[<span class="st">"new_link"</span>] <span class="op">=</span> final[<span class="st">"comment_id2"</span>].<span class="bu">apply</span>(link)</span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>final.index <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> format_time(timedelta):</span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>    hours, rem <span class="op">=</span> <span class="bu">divmod</span>(timedelta.total_seconds(), <span class="dv">3600</span>)</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>    minutes, seconds <span class="op">=</span> <span class="bu">divmod</span>(rem, <span class="dv">60</span>)</span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"</span><span class="sc">{</span><span class="bu">int</span>(hours)<span class="sc">:0&gt;2}</span><span class="ss">:</span><span class="sc">{</span><span class="bu">int</span>(minutes)<span class="sc">:0&gt;2}</span><span class="ss">"</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>final[<span class="st">'dt'</span>] <span class="op">=</span> pd.to_timedelta(final[<span class="st">'dt'</span>], unit<span class="op">=</span><span class="st">'h'</span>).<span class="bu">round</span>(<span class="st">'s'</span>).<span class="bu">apply</span>(format_time)</span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>Markdown(final[[<span class="st">'username1'</span>, <span class="st">'username2'</span>, <span class="st">'old_link'</span>, <span class="st">'new_link'</span>, <span class="st">'length'</span>, <span class="st">'dt'</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">'**Rank**'</span>, <span class="st">'**1st counter**'</span>, <span class="st">'**2nd counter**'</span>, <span class="st">'**Start**'</span>, <span class="st">'**End**'</span>, <span class="st">'**Length**'</span>, <span class="st">'**Duration**'</span>]))</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>The first seven runs are by u/davidjl123 and u/Countletics in the early 3Ms, and all of the top ten involve either david or countletics. The first one which doesn't either of them is number 17 between nonsensy and colby6666, starting at <span class="co">[</span><span class="ot">3,456,003</span><span class="co">](/comments/erw1rp/_/ff66e1r)</span> and continuing for 2000 counts.</span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
