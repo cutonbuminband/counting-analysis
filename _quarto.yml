@@ -34,4 +34,6 @@ format:
     reference-location: margin
     citation-location: margin
     highlight-style: pygments
-reference-location: margin
+
+execute:
+  freeze: auto
