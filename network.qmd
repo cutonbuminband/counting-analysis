@@ -101,7 +101,7 @@ which is still quite sizeable.
 
 ### Cliques
 
-Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other[^1]. These are known as *cliques* in the graph world. We can use `networkx` to easily calculate the size of the largest clique, and some more information about them
+Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other. These are known as *cliques* in the graph world. We can use `networkx` to easily calculate the size of the largest clique, and some more information about them
 
 ```{python}
 import functools
