@@ -139,7 +139,7 @@ Markdown(result.to_markdown(headers=['Counting partner', f'No. of replies by {ni
 We can see who the oldest still-active counters are, where still-active is generously defined as "having made a count within the last six months".
 ```{python}
 #| label: tbl-oldest-counters
-#| tbl-cap: The 10 currently-active counters who've been counting for the longest time
+#| tbl-cap: The 25 currently-active counters who've been counting for the longest time
 cutoff_date = pd.to_datetime('today') - pd.Timedelta('180d')
 active_counters = counts.loc[counts['date'] > cutoff_date].groupby("username").groups.keys()
 oldest_counters = counts.loc[counts['username'].isin(active_counters)].groupby("username")["date"].agg([min, max])
