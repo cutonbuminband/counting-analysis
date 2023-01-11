@@ -12,6 +12,7 @@ website:
         - index.qmd
         - separators.qmd
         - runs.qmd
+        - network.qmd
     - examples.qmd
   page-footer:
     center:
@@ -19,8 +20,10 @@ website:
         href: about.qmd
       - text: "Github"
         href: https://github.com/cutonbuminband/rcounting
+bibliography: references.bib
 format:
   html:
+    anchor-sections: true
     code-tools: true
     code-fold: show
     theme:
@@ -29,5 +32,6 @@ format:
     css: styles.css
     toc: true
     reference-location: margin
+    citation-location: margin
     highlight-style: pygments
 reference-location: margin

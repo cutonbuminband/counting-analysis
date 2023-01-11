@@ -1,0 +1,240 @@
+---
+title: "The r/counting network"
+---
+One of the interesting things we can look at using the counting data is the relationships between different counters. For example, and as an introduction, we can ask which counters have replied to each other most often
+
+```{python}
+#| code-fold: true
+#| code-summary: "Code for importing packages and loading data"
+from pathlib import Path
+import pandas as pd
+import sqlite3
+import matplotlib.pyplot as plt
+import numpy as np
+from rcounting import counters, analysis, graph_tools
+import seaborn as sns
+sns.set_theme()
+from IPython.display import Markdown
+data_directory = Path("../data")
+import networkx as nx
+
+db = sqlite3.connect(data_directory / "counting.sqlite")
+counts = pd.read_sql("select username from comments where position > 0 order by timestamp", db)
+counts["username"] = counts["username"].apply(counters.apply_alias)
+```
+
+@tbl-best-friends shows the 10 pairs of counters who have replied directly to each other most often. Evidently it's more likely that someone will appear in the table if they've made a lot of counts, but it's still interesting to see that the top spot isn't held by the top two counters.
+```{python}
+#| label: tbl-best-friends
+#| tbl-cap: The counters who have replied to each other most often.
+graph = analysis.response_graph(counts, 1000)
+graph.columns = ['source', 'target', 'weight']
+DG = nx.DiGraph(graph)
+DG.remove_edges_from(nx.selfloop_edges(DG))
+G = graph_tools.symmetrize(DG)
+
+edges = pd.DataFrame(G.edges(data=True), columns=['user1', 'user2', 'weight'])
+edges['weight'] = edges['weight'].apply(lambda x: x['weight'])
+Markdown(edges.sort_values(by='weight', ascending=False).head(10).to_markdown(index=False, headers=["**Counter 1**", "**Counter 2**", "**Total number of replies**"]))
+```
+
+# The r/counting relationship graph
+
+If we go into a bit more detail, what we really want to look at is the [graph](https://en.wikipedia.org/wiki/Graph_\(discrete_mathematics\)) of the r/counting community. We can represent each person as a node, and two nodes are connected if one of them has replied to the other. The weight of each connection is the number of times each person has replied to the other.
+
+Moving from a representation centering individual counts to one focussing on the relationship between pairs of counters lets us ask and answer some interesting questions.
+
+A natural question to ask is what is the **diameter** of the graph: that is, what is the smallest number of links, $D$, such that every counter is connected to every other in $D$ links or fewer. To answer this and every other graph question, we'll make use of the [networkx](https://networkx.org/documentation/stable/) library.
+
+```{python}
+print(f"The diameter is {nx.diameter(G)}")
+
+```
+
+That means that every counter in the top 1000 counters is at most four links away from every other node.
+
+Instead of the diameter, we can also ask about the **radius** of the graph. This is defined as the smallest number of links, $R$, such that *at least one* counter is connected to every other in $R$ links or fewer. You should be able to convince yourself that $D \leq 2R$.
+
+```{python}
+print(f"The radius is {nx.radius(G)}")
+```
+
+And in fact we see that there are counters that can reach every other count in 2 links or fewer. These counters are the center of the graph, and we can see who they are:
+
+```{python}
+Markdown(f"There are {len(nx.center(G))} counters in the center of the graph. They are:\n\n- "+ ", ".join(nx.center(G)))
+```
+
+To get a feel for just how connected the graph is, we can calculate two more things. The first is the size of the biggest group such that ever counter is connected to every other counter in the group via three links or fewer.
+
+
+```{python}
+import scipy
+import cvxopt
+from cvxopt import matrix, glpk
+
+glpk.options['msg_lev'] = 'GLP_MSG_OFF'
+
+paths = scipy.sparse.csgraph.floyd_warshall(nx.to_numpy_array(G), directed=False, unweighted=True)
+
+def group_size(paths, k):
+    rows, cols = np.where(np.triu(paths) > k)
+    constraints = np.zeros((len(rows), len(G)))
+    for idx, (row, col) in enumerate(zip(rows, cols)):
+        constraints[idx][row] = 1
+        constraints[idx][col] = 1
+    conflicts = np.ones(len(rows))
+    goal = -np.ones(len(G))
+    status, x = glpk.ilp(matrix(goal), matrix(constraints), matrix(conflicts), B=set(range(len(G))))
+    return int(sum(x))
+k = 3
+Markdown(f"There is a group of {group_size(paths, k)} counters that can all be reached within {k} links or fewer")
+```
+
+That's basically everyone in the top 1000.
+
+And for two counters the number is
+```{python}
+group_size(paths, 2)
+```
+which is still quite sizeable.
+
+### Cliques
+
+Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other[^1]. These are known as *cliques* in the graph world. We can use `networkx` to easily calculate the size of the largest clique, and some more information about them
+
+```{python}
+import functools
+import itertools
+cliques = list(nx.find_cliques(G))
+clique_number = nx.graph_clique_number(G, cliques)
+maximum_cliques = [clique for clique in cliques if len(clique) == clique_number]
+s = (f"The largest clique has size {clique_number} and there are {len(maximum_cliques)} such groups.\n\n")
+counters = functools.reduce(lambda x, y: set(x) | set(y), maximum_cliques)
+s += (f"The following {len(counters)} counters appear in at least one clique:\n\n - " + ", ".join(list(counters)) + "\n\n")
+unique_counters = functools.reduce(lambda x, y: set(x) & set(y), maximum_cliques)
+s += (f"And the following {len(unique_counters)} counters appear in every clique:\n\n - " + ", ".join(list(unique_counters)) + "\n\n")
+
+examples = set()
+for c1, c2 in itertools.combinations(maximum_cliques, 2):
+    d = set(c1) ^ set(c2)
+    if len(d) == 2:
+        examples |= set([tuple(sorted(d))])
+
+s += f"To get a {clique_number + 1}-clique, any of the following people would have to count together:\n\n- " + "\n- ".join(" and ".join(y) for y in examples)
+Markdown(s)
+```
+
+I'm sure it'll happen eventually!
+
+# Visualising the r/counting graph
+
+The above summary statistics are nice, but it would be even nicer if we could visualize the structure of the counting graph.
+
+That requires some way of placing nodes and edges in space, since a priori there is no spatial information in the graph.
+
+The nice creators of the [gephi]() software package have developed an excellent approach for this. The idea is that we can make nodes repel each other, and edges between nodes attract like springs, and then run the algorithm until the nodes find some equilibrium position. The result of this is that users with many total counts will be spread throughout the graph, and pairs of users who have counted a lot with each other will be relatively close
+
+When I do that on the counting graph, I get the structure seen on @fig-both
+
+:::{.column-page-inset}
+![The graph of the r/counting community, arranged according to the ForceAtlas 2 algorithm. The two colours are a partition of the graph into two communities](figures/both.svg){#fig-both}
+:::
+
+The colour corresponds to which community a given node belongs to, when using the [Louvain method for community detection](https://sourceforge.net/projects/louvain/) and adjusting the parameters so that only two communities appear^[This means that 2 probably isn't the best number for the total number of distinct communities in the graph; a higher number would probably be better. Instead, what it means is that if you have to assign one of two colours to each node, this is a good way of doing it.]. This is a completely different approach to the one used to arrange the graph, so it's interesting to see that there is fairly good spatial separation between the two colours.
+
+:::: {.column-screen-inset#fig-colours}
+::: {layout-nrow=1}
+![](figures/pink.svg)
+
+![](figures/blue.svg)
+
+:::
+The counters of respectively the pink and blue communities. The charts are vector graphics, so you should be able to view them in a separate tab and zoom in as much as you like.
+::::
+
+We know the usernames of the counters in each community, and they are shown on @fig-colours. Looking at them, it seems that what it mainly picks up is the era when people were active, where pink is older users, and blue is newer ones. Certainly for my case I'm far more familiar with the green counters than with the pink, so it makes sense that I ended up on the blue team. It also makes sense that the top counters ended up more or less in the middle of the graph.
+
+I hope we can all wear these badges with pride and use them to hate on the other team \#goblues.
+
+## The core of the r/counting graph
+
+The counting community has evolved over time, with new people dropping in, and older counters fading away (and sometimes staging [remarkable comebacks](index.qmd#tbl-oldest-counters)).
+
+In the counting graph, one person is connected to another if they've ever replied to each another. The **degree** of a person is a count of how many connections they have. There's a really neat approach to finding the most connected group of people in the graph that goes as follows:
+
+- Define the connectivity score of the graph as the degree of the least-connected person in the graph
+- Remove the least-connected person in the graph and see what happens to the connectivity score
+- Keep going until the connectivity score starts to decrease.
+
+When you remove one person, you do to things that might affect the overall connectivity score:
+
+- You remove the least-connected person, so in everyone that remains is at least as well connected as that person, and possibly more connected
+- You decrease the degree of everyone that was directly connected to the least-connected person, possibly causing the overall connectivity score to decrease.
+
+Doing that for the counting graph we get
+```{python}
+from networkx.algorithms.core import core_number
+core = core_number(G)
+max_core = max(core.values())
+unweighted_core = [key for key in core.keys() if core[key] == max(core.values())]
+Markdown(f"There are {len(unweighted_core)} counters in the unweighted core.")
+```
+
+### The weighted core
+
+The approach I've just described has an important flaw in that it completely ignores how often two counters have interacted, and only looks at whether they are connected. That means that the connection between two counters who have only one count together is given the same importance as the connection between the counters in @tbl-best-friends. That seems unfortunate.
+
+One way of proceeding would be to apply a threshold and only link two counters in the graph if they have counted together more than X times. That gets rid of the "One count is equivalent to arbitrarily many counts" issue, but isn't very satisfactory - instead, we get "X - 1 counts is equivalent to 0", and "X counts is equivalent to arbitrarily many".
+
+A better way would be if the strength of the connection could be incorporated into the calculation of the core. I'll spare you the details, but doing so is a bit tricky. When the network is unweighted, there is a fast algorithm for finding the core [@batagelj2003om], but adding weights breaks that algorithm. I ended up implementing it myself, you can see the implementation [here](https://github.com/cutonbuminband/rcounting/blob/main/rcounting/graph_tools.py#LL41) if you want.
+
+Once I have a method for taking into account the weighted degree of each node, there are two questions to consider:
+
+1. How to model the strength of a single connection
+2. How to model the total weight of a node, based on the strength of all the connections it has with other nodes
+
+The first question is absolutely vital to ask. If the strength of a connection between two counters is defined as just the total number of counts they have together, then no matter what else I do, the core ends up consisting of very few people who all have a lot of counts together. 
+
+```{python}
+coreness = graph_tools.weighted_core_number(G, p=1)
+max_core_value = max(coreness.values())
+unscaled_core = [x for x in core if coreness[x] == max_core_value]
+s = f"There are {len(unscaled_core)} counters in the core. They are:\n\n - " + "\n- ".join(unscaled_core)
+Markdown(s)
+```
+
+
+A choice that works fairly well is to model the strength of the connection as the logarithm of the total number of counts. That lets more intense connections have more importance, but within reason.
+
+The second question is a bit more subtle, since there's an intuitive choice that works fairly well, namely just using the sum of all the connection strengths. But that's not the only way to do things. In the end I ended up taking a weighted combination of the degree of the node and the total connection strength, so that the weighted degree of node $i$, $k'_{i}$ is given by
+
+$$
+k'_{i}= \left(k_{i}\right)^{1 - p} \left(\sum _{\textrm{neighbors} j}{w_{ij}}\right)^{p}
+$$
+
+where the sum runs over all neighbors $j$ of node $i$, $w_{ij}$ is the strength of the connection between $i$ and $j$, and $p$ is a parameter I choose that varies between $0$ and $1$. Setting $p = 0$ means that only the unweighted degree of the node is considered, while setting $p = 1$ means that only the sum of connection strengths matters. In between, you get a mix.
+
+```{python}
+graph_tools.scale_weights(G)
+coreness = graph_tools.weighted_core_number(G, p=1)
+max_core_value = max(coreness.values())
+weighted_core = [x for x in core if coreness[x] == max_core_value]
+nx.set_node_attributes(G, "periphery", name="k-core")
+nx.set_node_attributes(G.subgraph(weighted_core), "core", name="k-core")
+nx.write_gexf(G, "../data/graph.gexf")
+s = f"There are {len(weighted_core)} counters in the weighted core."
+Markdown(s)
+```
+
+This is a slightly smaller number then counters who were in the core for the unweighted case, and there's also some difference in the composition of the members that remain:
+
+```{python}
+Markdown(f"There are {len(set(weighted_core) ^ set(unweighted_core))} present in only one of the weighted or unweighted core.")
+```
+
+With the core in hand, it's possible to visualise the counting graph again, this time highlighting the members of the weighted core, as shown on @fig-core
+
+![The ~100 core members of the counting graph highlighted in green](figures/core.svg){#fig-core}
+
+Interestingly enough the core mainly seems to correspond to the blue team shown on @fig-both, so perhaps my earlier suggestion that the colours mainly correspond to age is incorrect.
