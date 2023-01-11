@@ -441,7 +441,7 @@ div.csl-indent {
 <p>which is still quite sizeable.</p>
 <section id="cliques" class="level3">
 <h3 class="anchored" data-anchor-id="cliques">Cliques</h3>
-<p>Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other[^1]. These are known as <em>cliques</em> in the graph world. We can use <code>networkx</code> to easily calculate the size of the largest clique, and some more information about them</p>
+<p>Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other. These are known as <em>cliques</em> in the graph world. We can use <code>networkx</code> to easily calculate the size of the largest clique, and some more information about them</p>
 <div class="cell" data-execution_count="8">
 <details open="">
 <summary>Code</summary>
@@ -469,23 +469,23 @@ div.csl-indent {
 <p>The largest clique has size 35 and there are 18 such groups.</p>
 <p>The following 44 counters appear in at least one clique:</p>
 <ul>
-<li>kdiuro13, MrUnderdawg, a-username-for-me, overturned-rock, PaleRepresentative, -R3DF0X, qwertylool, Smartstocks, Countletics, timo78888, The_Nepenthe, CutOnBumInBandHere9, nonsensy, Mooraell, TehVulpez, TheNitromeFan, Cox_1920, NeonTaterTots, Zaajdaeon, davidjl123, GarlicoinAccount, padiwik, thephilsblogbar2, Juqu, NobodyL0vesMe, atomicimploder, Ezekiel134, noduorg, foxthechicken, amazingpikachu_38, Trial-Name, FartyMcNarty, AlienApricot, llamasR5life, dominodan123, treje, AxelC77, Antichess, Tornado9797, 4everNdeavor, Nekyiia, mistyskye14, davockx, Urbul</li>
+<li>NobodyL0vesMe, Juqu, TheNitromeFan, Cox_1920, overturned-rock, qwertylool, AxelC77, Zaajdaeon, a-username-for-me, davidjl123, padiwik, CutOnBumInBandHere9, TehVulpez, FartyMcNarty, AlienApricot, foxthechicken, PaleRepresentative, Smartstocks, amazingpikachu_38, MrUnderdawg, atomicimploder, 4everNdeavor, Mooraell, mistyskye14, timo78888, thephilsblogbar2, davockx, Ezekiel134, Countletics, nonsensy, Nekyiia, Urbul, treje, Trial-Name, NeonTaterTots, Tornado9797, noduorg, The_Nepenthe, Antichess, -R3DF0X, kdiuro13, dominodan123, llamasR5life, GarlicoinAccount</li>
 </ul>
 <p>And the following 27 counters appear in every clique:</p>
 <ul>
-<li>kdiuro13, MrUnderdawg, a-username-for-me, PaleRepresentative, noduorg, -R3DF0X, qwertylool, Smartstocks, Countletics, timo78888, llamasR5life, dominodan123, Antichess, nonsensy, Mooraell, TehVulpez, TheNitromeFan, Cox_1920, Zaajdaeon, davidjl123, GarlicoinAccount, thephilsblogbar2, NobodyL0vesMe, mistyskye14, atomicimploder, Urbul, Ezekiel134</li>
+<li>NobodyL0vesMe, Cox_1920, TheNitromeFan, timo78888, thephilsblogbar2, qwertylool, Zaajdaeon, a-username-for-me, davidjl123, Ezekiel134, Countletics, TehVulpez, nonsensy, Urbul, PaleRepresentative, mistyskye14, Smartstocks, noduorg, Antichess, MrUnderdawg, -R3DF0X, atomicimploder, kdiuro13, dominodan123, Mooraell, llamasR5life, GarlicoinAccount</li>
 </ul>
 <p>To get a 36-clique, any of the following people would have to count together:</p>
 <ul>
-<li>AxelC77 and Juqu</li>
+<li>The_Nepenthe and padiwik</li>
+<li>AlienApricot and FartyMcNarty</li>
 <li>NeonTaterTots and foxthechicken</li>
-<li>Nekyiia and overturned-rock</li>
+<li>AxelC77 and Juqu</li>
 <li>CutOnBumInBandHere9 and davockx</li>
 <li>4everNdeavor and Trial-Name</li>
 <li>AxelC77 and amazingpikachu_38</li>
-<li>The_Nepenthe and padiwik</li>
-<li>AlienApricot and FartyMcNarty</li>
 <li>Tornado9797 and treje</li>
+<li>Nekyiia and overturned-rock</li>
 </ul>
 </div>
 </div>
@@ -1038,7 +1038,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb16-115"><a href="#cb16-115" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-116"><a href="#cb16-116" aria-hidden="true" tabindex="-1"></a><span class="fu">### Cliques</span></span>
 <span id="cb16-117"><a href="#cb16-117" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-118"><a href="#cb16-118" aria-hidden="true" tabindex="-1"></a>Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other<span class="ot">[^1]</span>. These are known as *cliques* in the graph world. We can use <span class="in">`networkx`</span> to easily calculate the size of the largest clique, and some more information about them</span>
+<span id="cb16-118"><a href="#cb16-118" aria-hidden="true" tabindex="-1"></a>Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other. These are known as *cliques* in the graph world. We can use <span class="in">`networkx`</span> to easily calculate the size of the largest clique, and some more information about them</span>
 <span id="cb16-119"><a href="#cb16-119" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-122"><a href="#cb16-122" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
 <span id="cb16-123"><a href="#cb16-123" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> functools</span>
