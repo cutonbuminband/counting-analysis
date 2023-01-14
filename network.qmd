@@ -17,6 +17,7 @@ sns.set_theme()
 from IPython.display import Markdown
 data_directory = Path("../data")
 import networkx as nx
+import itertools
 
 db = sqlite3.connect(data_directory / "counting.sqlite")
 counts = pd.read_sql("select username from comments where position > 0 order by timestamp", db)
@@ -38,6 +39,17 @@ edges['weight'] = edges['weight'].apply(lambda x: x['weight'])
 Markdown(edges.sort_values(by='weight', ascending=False).head(10).to_markdown(index=False, headers=["**Counter 1**", "**Counter 2**", "**Total number of replies**"]))
 ```
 
+We can also see which counters have counted with the most other people.
+
+```{python}
+#| label: tlb-partner-number
+#| tbl-cap: The 10 counters with the most different counting partners
+counts['replying_to'] = counts['username'].shift(1)
+counts['replied by'] = counts['username'].shift(-1)
+partners = pd.melt(counts, id_vars=['username']).groupby('username')['value'].nunique().sort_values(ascending=False)
+Markdown(partners[itertools.islice(filter(lambda x: not counters.is_banned_counter(x), partners.index), 10)].to_markdown(headers=["**Username**", "**Number of counting partners**"]))
+
+```
 # The r/counting relationship graph
 
 If we go into a bit more detail, what we really want to look at is the [graph](https://en.wikipedia.org/wiki/Graph_\(discrete_mathematics\)) of the r/counting community. We can represent each person as a node, and two nodes are connected if one of them has replied to the other. The weight of each connection is the number of times each person has replied to the other.
