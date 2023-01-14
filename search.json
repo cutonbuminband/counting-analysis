@@ -32,7 +32,7 @@
     "href": "network.html",
     "title": "The r/counting network",
     "section": "",
-    "text": "One of the interesting things we can look at using the counting data is the relationships between different counters. For example, and as an introduction, we can ask which counters have replied to each other most often\nTable 1 shows the 10 pairs of counters who have replied directly to each other most often. Evidently it’s more likely that someone will appear in the table if they’ve made a lot of counts, but it’s still interesting to see that the top spot isn’t held by the top two counters."
+    "text": "One of the interesting things we can look at using the counting data is the relationships between different counters. For example, and as an introduction, we can ask which counters have replied to each other most often\nTable 1 shows the 10 pairs of counters who have replied directly to each other most often. Evidently it’s more likely that someone will appear in the table if they’ve made a lot of counts, but it’s still interesting to see that the top spot isn’t held by the top two counters.\nWe can also see which counters have counted with the most other people."
   },
   {
     "objectID": "network.html#the-core-of-the-rcounting-graph",
