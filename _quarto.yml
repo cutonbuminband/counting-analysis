@@ -35,3 +35,5 @@ format:
     reference-location: margin
     citation-location: margin
     highlight-style: pygments
+execute:
+  freeze: auto

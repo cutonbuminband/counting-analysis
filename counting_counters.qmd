@@ -54,8 +54,7 @@ part of a series of replies between just two users. Still, it might be
 interesting to see which threads had the most counters taking part:
 
 ```{python}
-counts['dummy'] = 1
-levels = counts.groupby(['submission_id', 'username'], sort=False).sum()
+levels = counts.groupby(['submission_id', 'username'], sort=False).size()
 top = levels.groupby(level=0, sort=False).size().sort_values(ascending=False).head()
 top_submissions =  submissions.query("submission_id in @top.index").copy()
 combined = pd.concat([top, top_submissions.set_index("submission_id")], axis=1)
@@ -119,10 +118,10 @@ We can find the submission with the highest number of effective counters.
 ```{python}
 from rcounting.analysis import effective_number_of_counters
 effective_counters = levels.groupby(level=0, sort=False).apply(effective_number_of_counters)
-submission_id = effective_counters.idxmax().iat[0]
+submission_id = effective_counters.idxmax()
 s = (f"The thread with the highest number of effective counters is "
      f"{submissions.query('submission_id == @submission_id')['link'].iat[0]}, "
-     f"with {effective_counters.loc[submission_id].iat[0]:.1f} counters.")
+     f"with {effective_counters.loc[submission_id]:.1f} counters.")
 Markdown(s)
 
 ```
