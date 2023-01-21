@@ -273,12 +273,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell" data-execution_count="3">
 <details open="">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">'dummy'</span>] <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>levels <span class="op">=</span> counts.groupby([<span class="st">'submission_id'</span>, <span class="st">'username'</span>], sort<span class="op">=</span><span class="va">False</span>).<span class="bu">sum</span>()</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>top <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size().sort_values(ascending<span class="op">=</span><span class="va">False</span>).head()</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>top_submissions <span class="op">=</span>  submissions.query(<span class="st">"submission_id in @top.index"</span>).copy()</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> pd.concat([top, top_submissions.set_index(<span class="st">"submission_id"</span>)], axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>Markdown(combined[[<span class="st">"link"</span>, <span class="dv">0</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">"**Thread**"</span>, <span class="st">"**Number of counters**"</span>], index<span class="op">=</span><span class="va">False</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>levels <span class="op">=</span> counts.groupby([<span class="st">'submission_id'</span>, <span class="st">'username'</span>], sort<span class="op">=</span><span class="va">False</span>).size()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>top <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size().sort_values(ascending<span class="op">=</span><span class="va">False</span>).head()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>top_submissions <span class="op">=</span>  submissions.query(<span class="st">"submission_id in @top.index"</span>).copy()</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> pd.concat([top, top_submissions.set_index(<span class="st">"submission_id"</span>)], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>Markdown(combined[[<span class="st">"link"</span>, <span class="dv">0</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">"**Thread**"</span>, <span class="st">"**Number of counters**"</span>], index<span class="op">=</span><span class="va">False</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <table class="table table-sm table-striped">
@@ -406,10 +405,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting.analysis <span class="im">import</span> effective_number_of_counters</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>effective_counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).<span class="bu">apply</span>(effective_number_of_counters)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>submission_id <span class="op">=</span> effective_counters.idxmax().iat[<span class="dv">0</span>]</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>submission_id <span class="op">=</span> effective_counters.idxmax()</span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> (<span class="ss">f"The thread with the highest number of effective counters is "</span></span>
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>     <span class="ss">f"</span><span class="sc">{</span>submissions<span class="sc">.</span>query(<span class="st">'submission_id == @submission_id'</span>)[<span class="st">'link'</span>]<span class="sc">.</span>iat[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">, "</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>     <span class="ss">f"with </span><span class="sc">{</span>effective_counters<span class="sc">.</span>loc[submission_id]<span class="sc">.</span>iat[<span class="dv">0</span>]<span class="sc">:.1f}</span><span class="ss"> counters."</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>     <span class="ss">f"with </span><span class="sc">{</span>effective_counters<span class="sc">.</span>loc[submission_id]<span class="sc">:.1f}</span><span class="ss"> counters."</span>)</span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>Markdown(s)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display" data-execution_count="7">
@@ -876,145 +875,144 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb15-58"><a href="#cb15-58" aria-hidden="true" tabindex="-1"></a>interesting to see which threads had the most counters taking part:</span>
 <span id="cb15-59"><a href="#cb15-59" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-62"><a href="#cb15-62" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-63"><a href="#cb15-63" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">'dummy'</span>] <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb15-64"><a href="#cb15-64" aria-hidden="true" tabindex="-1"></a>levels <span class="op">=</span> counts.groupby([<span class="st">'submission_id'</span>, <span class="st">'username'</span>], sort<span class="op">=</span><span class="va">False</span>).<span class="bu">sum</span>()</span>
-<span id="cb15-65"><a href="#cb15-65" aria-hidden="true" tabindex="-1"></a>top <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size().sort_values(ascending<span class="op">=</span><span class="va">False</span>).head()</span>
-<span id="cb15-66"><a href="#cb15-66" aria-hidden="true" tabindex="-1"></a>top_submissions <span class="op">=</span>  submissions.query(<span class="st">"submission_id in @top.index"</span>).copy()</span>
-<span id="cb15-67"><a href="#cb15-67" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> pd.concat([top, top_submissions.set_index(<span class="st">"submission_id"</span>)], axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb15-68"><a href="#cb15-68" aria-hidden="true" tabindex="-1"></a>Markdown(combined[[<span class="st">"link"</span>, <span class="dv">0</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">"**Thread**"</span>, <span class="st">"**Number of counters**"</span>], index<span class="op">=</span><span class="va">False</span>))</span>
-<span id="cb15-69"><a href="#cb15-69" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-70"><a href="#cb15-70" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-71"><a href="#cb15-71" aria-hidden="true" tabindex="-1"></a>Some of these threads really had a lot of participants!</span>
-<span id="cb15-72"><a href="#cb15-72" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-73"><a href="#cb15-73" aria-hidden="true" tabindex="-1"></a>On the oppositve end of the scale, we can look at the threads with fewest</span>
-<span id="cb15-74"><a href="#cb15-74" aria-hidden="true" tabindex="-1"></a>participants. Since you're not allowed to reply to yourself, at least two people</span>
-<span id="cb15-75"><a href="#cb15-75" aria-hidden="true" tabindex="-1"></a>have to take part in each thread. We can easily see how many times that's</span>
-<span id="cb15-76"><a href="#cb15-76" aria-hidden="true" tabindex="-1"></a>happened:</span>
-<span id="cb15-77"><a href="#cb15-77" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-80"><a href="#cb15-80" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-81"><a href="#cb15-81" aria-hidden="true" tabindex="-1"></a>perfect <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size() <span class="op">==</span> <span class="dv">2</span></span>
-<span id="cb15-82"><a href="#cb15-82" aria-hidden="true" tabindex="-1"></a>perfect <span class="op">=</span> perfect.loc[perfect].index</span>
-<span id="cb15-83"><a href="#cb15-83" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(perfect)</span>
-<span id="cb15-84"><a href="#cb15-84" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-85"><a href="#cb15-85" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-86"><a href="#cb15-86" aria-hidden="true" tabindex="-1"></a>So not a huge amount of times, but it's happened. The last five threads with</span>
-<span id="cb15-87"><a href="#cb15-87" aria-hidden="true" tabindex="-1"></a>only two counters are</span>
-<span id="cb15-88"><a href="#cb15-88" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-91"><a href="#cb15-91" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-92"><a href="#cb15-92" aria-hidden="true" tabindex="-1"></a>perfect_500s <span class="op">=</span> submissions.query(<span class="st">"submission_id in @perfect"</span>).copy().tail().iloc[::<span class="op">-</span><span class="dv">1</span>]</span>
-<span id="cb15-93"><a href="#cb15-93" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> find_counters(submission_id):</span>
-<span id="cb15-94"><a href="#cb15-94" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.Series(levels.loc[submission_id].index)</span>
-<span id="cb15-95"><a href="#cb15-95" aria-hidden="true" tabindex="-1"></a>perfect_500s[[<span class="st">"first_counter"</span>, <span class="st">"second_counter"</span>]] <span class="op">=</span> perfect_500s[<span class="st">"submission_id"</span>].<span class="bu">apply</span>(find_counters)</span>
-<span id="cb15-96"><a href="#cb15-96" aria-hidden="true" tabindex="-1"></a>Markdown(perfect_500s[[<span class="st">"link"</span>, <span class="st">"first_counter"</span>, <span class="st">"second_counter"</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">"**Thread**"</span>, <span class="st">"**First Counter**"</span>, <span class="st">"**Second Counter**"</span>], index<span class="op">=</span><span class="va">False</span>))</span>
-<span id="cb15-97"><a href="#cb15-97" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-98"><a href="#cb15-98" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-99"><a href="#cb15-99" aria-hidden="true" tabindex="-1"></a>We can plot the distribution of the number of counters in each thread;</span>
-<span id="cb15-100"><a href="#cb15-100" aria-hidden="true" tabindex="-1"></a>this is shown on figure @fig-counters-hist.</span>
-<span id="cb15-101"><a href="#cb15-101" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-104"><a href="#cb15-104" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-105"><a href="#cb15-105" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-counters-hist</span></span>
-<span id="cb15-106"><a href="#cb15-106" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: The distribution of the number of counters participating in a thread</span></span>
-<span id="cb15-107"><a href="#cb15-107" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb15-108"><a href="#cb15-108" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-109"><a href="#cb15-109" aria-hidden="true" tabindex="-1"></a>counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size()</span>
-<span id="cb15-110"><a href="#cb15-110" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.histplot(counters[counters <span class="op">&lt;=</span> <span class="dv">100</span>])</span>
-<span id="cb15-111"><a href="#cb15-111" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(left<span class="op">=</span><span class="dv">2</span>)</span>
-<span id="cb15-112"><a href="#cb15-112" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Number of counters"</span>)</span>
-<span id="cb15-113"><a href="#cb15-113" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
-<span id="cb15-114"><a href="#cb15-114" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-115"><a href="#cb15-115" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-116"><a href="#cb15-116" aria-hidden="true" tabindex="-1"></a><span class="fu"># Effective number of counters per thread</span></span>
-<span id="cb15-117"><a href="#cb15-117" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-118"><a href="#cb15-118" aria-hidden="true" tabindex="-1"></a>The total number of counters that participate in a thread is an inherently noisy</span>
-<span id="cb15-119"><a href="#cb15-119" aria-hidden="true" tabindex="-1"></a>quantity. One person making a single count can change the total even if they</span>
-<span id="cb15-120"><a href="#cb15-120" aria-hidden="true" tabindex="-1"></a>make no other counts in the thread. A better way is to look at the</span>
-<span id="cb15-121"><a href="#cb15-121" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">effective</span><span class="co">](https://en.wikipedia.org/wiki/Effective_number_of_parties)</span> number of</span>
-<span id="cb15-122"><a href="#cb15-122" aria-hidden="true" tabindex="-1"></a>counters taking part in a thread. The effective number takes into account how</span>
-<span id="cb15-123"><a href="#cb15-123" aria-hidden="true" tabindex="-1"></a>skewed the distribution of participants is. If 10 people count 100 times each in</span>
-<span id="cb15-124"><a href="#cb15-124" aria-hidden="true" tabindex="-1"></a>a thread, then both the actual and the effective number of counters is 10. If</span>
-<span id="cb15-125"><a href="#cb15-125" aria-hidden="true" tabindex="-1"></a>instead two people count 496 times each, and 8 people count once each, then the</span>
-<span id="cb15-126"><a href="#cb15-126" aria-hidden="true" tabindex="-1"></a>effective number of counters is 2.02, because two people made basically all the</span>
-<span id="cb15-127"><a href="#cb15-127" aria-hidden="true" tabindex="-1"></a>counts.</span>
-<span id="cb15-128"><a href="#cb15-128" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-129"><a href="#cb15-129" aria-hidden="true" tabindex="-1"></a>We can find the submission with the highest number of effective counters.</span>
-<span id="cb15-130"><a href="#cb15-130" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-133"><a href="#cb15-133" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-134"><a href="#cb15-134" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting.analysis <span class="im">import</span> effective_number_of_counters</span>
-<span id="cb15-135"><a href="#cb15-135" aria-hidden="true" tabindex="-1"></a>effective_counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).<span class="bu">apply</span>(effective_number_of_counters)</span>
-<span id="cb15-136"><a href="#cb15-136" aria-hidden="true" tabindex="-1"></a>submission_id <span class="op">=</span> effective_counters.idxmax().iat[<span class="dv">0</span>]</span>
-<span id="cb15-137"><a href="#cb15-137" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> (<span class="ss">f"The thread with the highest number of effective counters is "</span></span>
-<span id="cb15-138"><a href="#cb15-138" aria-hidden="true" tabindex="-1"></a>     <span class="ss">f"</span><span class="sc">{</span>submissions<span class="sc">.</span>query(<span class="st">'submission_id == @submission_id'</span>)[<span class="st">'link'</span>]<span class="sc">.</span>iat[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">, "</span></span>
-<span id="cb15-139"><a href="#cb15-139" aria-hidden="true" tabindex="-1"></a>     <span class="ss">f"with </span><span class="sc">{</span>effective_counters<span class="sc">.</span>loc[submission_id]<span class="sc">.</span>iat[<span class="dv">0</span>]<span class="sc">:.1f}</span><span class="ss"> counters."</span>)</span>
-<span id="cb15-140"><a href="#cb15-140" aria-hidden="true" tabindex="-1"></a>Markdown(s)</span>
-<span id="cb15-141"><a href="#cb15-141" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-142"><a href="#cb15-142" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-143"><a href="#cb15-143" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-144"><a href="#cb15-144" aria-hidden="true" tabindex="-1"></a>We can also compare the total and the effective number of counters</span>
-<span id="cb15-145"><a href="#cb15-145" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-148"><a href="#cb15-148" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-149"><a href="#cb15-149" aria-hidden="true" tabindex="-1"></a>total_counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size()</span>
-<span id="cb15-150"><a href="#cb15-150" aria-hidden="true" tabindex="-1"></a>merged <span class="op">=</span> (pd.concat([effective_counters, total_counters], axis<span class="op">=</span><span class="dv">1</span>))</span>
-<span id="cb15-151"><a href="#cb15-151" aria-hidden="true" tabindex="-1"></a>merged.columns <span class="op">=</span> [<span class="st">'Effective counters'</span>, <span class="st">'Actual counters'</span>]</span>
-<span id="cb15-152"><a href="#cb15-152" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-153"><a href="#cb15-153" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-156"><a href="#cb15-156" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-157"><a href="#cb15-157" aria-hidden="true" tabindex="-1"></a>table <span class="op">=</span> merged.describe().transpose()[[<span class="st">"mean"</span>, <span class="st">"50%"</span>, <span class="st">"max"</span>]]</span>
-<span id="cb15-158"><a href="#cb15-158" aria-hidden="true" tabindex="-1"></a>Markdown(table.to_markdown(floatfmt<span class="op">=</span><span class="st">".1f"</span>, headers<span class="op">=</span>[<span class="st">"**Mean**"</span>, <span class="st">"**Median**"</span>, <span class="st">"**Maximum**"</span>]))</span>
-<span id="cb15-159"><a href="#cb15-159" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-160"><a href="#cb15-160" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-161"><a href="#cb15-161" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-162"><a href="#cb15-162" aria-hidden="true" tabindex="-1"></a>We can see that both the total and effective number of counters have a median</span>
-<span id="cb15-163"><a href="#cb15-163" aria-hidden="true" tabindex="-1"></a>that is lower than the mean, indicating that the distributions have long tails</span>
-<span id="cb15-164"><a href="#cb15-164" aria-hidden="true" tabindex="-1"></a>to the right. We can plot these, which is done on figure @fig-kdes. You can</span>
-<span id="cb15-165"><a href="#cb15-165" aria-hidden="true" tabindex="-1"></a>clearly see how much more spread out the actual number of counters is compared</span>
-<span id="cb15-166"><a href="#cb15-166" aria-hidden="true" tabindex="-1"></a>with the effective number. The effective number is really sharply peaked at 2,</span>
-<span id="cb15-167"><a href="#cb15-167" aria-hidden="true" tabindex="-1"></a>with 25% of the counts lying in the range 2-2.4.</span>
-<span id="cb15-168"><a href="#cb15-168" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-171"><a href="#cb15-171" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-172"><a href="#cb15-172" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-kdes</span></span>
-<span id="cb15-173"><a href="#cb15-173" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: The distributions of the number of effective and actual counters in each thread</span></span>
-<span id="cb15-174"><a href="#cb15-174" aria-hidden="true" tabindex="-1"></a>limits <span class="op">=</span> [<span class="dv">2</span>, <span class="dv">50</span>]</span>
-<span id="cb15-175"><a href="#cb15-175" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> merged.plot.kde(ind<span class="op">=</span>np.linspace(<span class="op">*</span>limits))</span>
-<span id="cb15-176"><a href="#cb15-176" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(<span class="op">*</span>limits)</span>
-<span id="cb15-177"><a href="#cb15-177" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(bottom<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb15-178"><a href="#cb15-178" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
-<span id="cb15-179"><a href="#cb15-179" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-180"><a href="#cb15-180" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-181"><a href="#cb15-181" aria-hidden="true" tabindex="-1"></a>We can also plot how the effective and actual number of counters have evolved</span>
-<span id="cb15-182"><a href="#cb15-182" aria-hidden="true" tabindex="-1"></a>throughout r/counting history; this is shown on figure @fig-rolling. The actual</span>
-<span id="cb15-183"><a href="#cb15-183" aria-hidden="true" tabindex="-1"></a>and effective number of counters track each other quite closely across threads.</span>
-<span id="cb15-184"><a href="#cb15-184" aria-hidden="true" tabindex="-1"></a>It seems there's been a gradual decline in the number of counters participating</span>
-<span id="cb15-185"><a href="#cb15-185" aria-hidden="true" tabindex="-1"></a>in each thread, but with spikes of activity. It looks like there's a sustained</span>
-<span id="cb15-186"><a href="#cb15-186" aria-hidden="true" tabindex="-1"></a>uptick right now; let's hope we keep it up! One thing I was expecting to see was</span>
-<span id="cb15-187"><a href="#cb15-187" aria-hidden="true" tabindex="-1"></a>clear spikes at 100k threads, since running isn't allowed on those. And those</span>
-<span id="cb15-188"><a href="#cb15-188" aria-hidden="true" tabindex="-1"></a>spikes just aren't apparent in the data.</span>
-<span id="cb15-189"><a href="#cb15-189" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-192"><a href="#cb15-192" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-193"><a href="#cb15-193" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-rolling</span></span>
-<span id="cb15-194"><a href="#cb15-194" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: How the number of effective and actual counters has changed through r/counting history, a 10-thread rolling average</span></span>
-<span id="cb15-195"><a href="#cb15-195" aria-hidden="true" tabindex="-1"></a>bar <span class="op">=</span> merged.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb15-196"><a href="#cb15-196" aria-hidden="true" tabindex="-1"></a>bar.set_index((bar.index <span class="op">+</span> <span class="dv">15</span>)<span class="op">/</span><span class="dv">1000</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb15-197"><a href="#cb15-197" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> bar.rolling(<span class="dv">10</span>).mean().plot(secondary_y<span class="op">=</span>[<span class="st">'Effective counters'</span>], alpha<span class="op">=</span><span class="fl">0.7</span>)</span>
-<span id="cb15-198"><a href="#cb15-198" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(left<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb15-199"><a href="#cb15-199" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Count [millions]"</span>)</span>
-<span id="cb15-200"><a href="#cb15-200" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
-<span id="cb15-201"><a href="#cb15-201" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb15-202"><a href="#cb15-202" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-203"><a href="#cb15-203" aria-hidden="true" tabindex="-1"></a>We can also plot the effective number of counters as a function of the actual</span>
-<span id="cb15-204"><a href="#cb15-204" aria-hidden="true" tabindex="-1"></a>number of counters. You can see generally, the more actual counters there are in</span>
-<span id="cb15-205"><a href="#cb15-205" aria-hidden="true" tabindex="-1"></a>a thread, there more effective counters there will be, but the relationship is</span>
-<span id="cb15-206"><a href="#cb15-206" aria-hidden="true" tabindex="-1"></a>fairly noisy.</span>
-<span id="cb15-207"><a href="#cb15-207" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-210"><a href="#cb15-210" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb15-211"><a href="#cb15-211" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> np.polyfit(merged[<span class="st">'Actual counters'</span>], merged[<span class="st">'Effective counters'</span>], <span class="dv">1</span>, full<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb15-212"><a href="#cb15-212" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.regplot(x<span class="op">=</span><span class="st">'Actual counters'</span>, y<span class="op">=</span><span class="st">'Effective counters'</span>, data<span class="op">=</span>merged,</span>
-<span id="cb15-213"><a href="#cb15-213" aria-hidden="true" tabindex="-1"></a>                 line_kws<span class="op">=</span>{<span class="st">"color"</span>: <span class="st">"k"</span>, <span class="st">"linestyle"</span>: <span class="st">"--"</span>})</span>
-<span id="cb15-214"><a href="#cb15-214" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.array([<span class="dv">0</span>, <span class="dv">100</span>])</span>
-<span id="cb15-215"><a href="#cb15-215" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(<span class="dv">0</span>, <span class="dv">100</span>)</span>
-<span id="cb15-216"><a href="#cb15-216" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(bottom<span class="op">=</span><span class="dv">2</span>)</span>
-<span id="cb15-217"><a href="#cb15-217" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Actual vs effective number of counters'</span>)</span>
-<span id="cb15-218"><a href="#cb15-218" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
-<span id="cb15-219"><a href="#cb15-219" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-63"><a href="#cb15-63" aria-hidden="true" tabindex="-1"></a>levels <span class="op">=</span> counts.groupby([<span class="st">'submission_id'</span>, <span class="st">'username'</span>], sort<span class="op">=</span><span class="va">False</span>).size()</span>
+<span id="cb15-64"><a href="#cb15-64" aria-hidden="true" tabindex="-1"></a>top <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size().sort_values(ascending<span class="op">=</span><span class="va">False</span>).head()</span>
+<span id="cb15-65"><a href="#cb15-65" aria-hidden="true" tabindex="-1"></a>top_submissions <span class="op">=</span>  submissions.query(<span class="st">"submission_id in @top.index"</span>).copy()</span>
+<span id="cb15-66"><a href="#cb15-66" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> pd.concat([top, top_submissions.set_index(<span class="st">"submission_id"</span>)], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb15-67"><a href="#cb15-67" aria-hidden="true" tabindex="-1"></a>Markdown(combined[[<span class="st">"link"</span>, <span class="dv">0</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">"**Thread**"</span>, <span class="st">"**Number of counters**"</span>], index<span class="op">=</span><span class="va">False</span>))</span>
+<span id="cb15-68"><a href="#cb15-68" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-69"><a href="#cb15-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-70"><a href="#cb15-70" aria-hidden="true" tabindex="-1"></a>Some of these threads really had a lot of participants!</span>
+<span id="cb15-71"><a href="#cb15-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-72"><a href="#cb15-72" aria-hidden="true" tabindex="-1"></a>On the oppositve end of the scale, we can look at the threads with fewest</span>
+<span id="cb15-73"><a href="#cb15-73" aria-hidden="true" tabindex="-1"></a>participants. Since you're not allowed to reply to yourself, at least two people</span>
+<span id="cb15-74"><a href="#cb15-74" aria-hidden="true" tabindex="-1"></a>have to take part in each thread. We can easily see how many times that's</span>
+<span id="cb15-75"><a href="#cb15-75" aria-hidden="true" tabindex="-1"></a>happened:</span>
+<span id="cb15-76"><a href="#cb15-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-79"><a href="#cb15-79" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-80"><a href="#cb15-80" aria-hidden="true" tabindex="-1"></a>perfect <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size() <span class="op">==</span> <span class="dv">2</span></span>
+<span id="cb15-81"><a href="#cb15-81" aria-hidden="true" tabindex="-1"></a>perfect <span class="op">=</span> perfect.loc[perfect].index</span>
+<span id="cb15-82"><a href="#cb15-82" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(perfect)</span>
+<span id="cb15-83"><a href="#cb15-83" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-84"><a href="#cb15-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-85"><a href="#cb15-85" aria-hidden="true" tabindex="-1"></a>So not a huge amount of times, but it's happened. The last five threads with</span>
+<span id="cb15-86"><a href="#cb15-86" aria-hidden="true" tabindex="-1"></a>only two counters are</span>
+<span id="cb15-87"><a href="#cb15-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-90"><a href="#cb15-90" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-91"><a href="#cb15-91" aria-hidden="true" tabindex="-1"></a>perfect_500s <span class="op">=</span> submissions.query(<span class="st">"submission_id in @perfect"</span>).copy().tail().iloc[::<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb15-92"><a href="#cb15-92" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> find_counters(submission_id):</span>
+<span id="cb15-93"><a href="#cb15-93" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.Series(levels.loc[submission_id].index)</span>
+<span id="cb15-94"><a href="#cb15-94" aria-hidden="true" tabindex="-1"></a>perfect_500s[[<span class="st">"first_counter"</span>, <span class="st">"second_counter"</span>]] <span class="op">=</span> perfect_500s[<span class="st">"submission_id"</span>].<span class="bu">apply</span>(find_counters)</span>
+<span id="cb15-95"><a href="#cb15-95" aria-hidden="true" tabindex="-1"></a>Markdown(perfect_500s[[<span class="st">"link"</span>, <span class="st">"first_counter"</span>, <span class="st">"second_counter"</span>]].to_markdown(headers<span class="op">=</span>[<span class="st">"**Thread**"</span>, <span class="st">"**First Counter**"</span>, <span class="st">"**Second Counter**"</span>], index<span class="op">=</span><span class="va">False</span>))</span>
+<span id="cb15-96"><a href="#cb15-96" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-97"><a href="#cb15-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-98"><a href="#cb15-98" aria-hidden="true" tabindex="-1"></a>We can plot the distribution of the number of counters in each thread;</span>
+<span id="cb15-99"><a href="#cb15-99" aria-hidden="true" tabindex="-1"></a>this is shown on figure @fig-counters-hist.</span>
+<span id="cb15-100"><a href="#cb15-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-103"><a href="#cb15-103" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-104"><a href="#cb15-104" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-counters-hist</span></span>
+<span id="cb15-105"><a href="#cb15-105" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: The distribution of the number of counters participating in a thread</span></span>
+<span id="cb15-106"><a href="#cb15-106" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb15-107"><a href="#cb15-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-108"><a href="#cb15-108" aria-hidden="true" tabindex="-1"></a>counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size()</span>
+<span id="cb15-109"><a href="#cb15-109" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.histplot(counters[counters <span class="op">&lt;=</span> <span class="dv">100</span>])</span>
+<span id="cb15-110"><a href="#cb15-110" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(left<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb15-111"><a href="#cb15-111" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Number of counters"</span>)</span>
+<span id="cb15-112"><a href="#cb15-112" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb15-113"><a href="#cb15-113" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-114"><a href="#cb15-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-115"><a href="#cb15-115" aria-hidden="true" tabindex="-1"></a><span class="fu"># Effective number of counters per thread</span></span>
+<span id="cb15-116"><a href="#cb15-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-117"><a href="#cb15-117" aria-hidden="true" tabindex="-1"></a>The total number of counters that participate in a thread is an inherently noisy</span>
+<span id="cb15-118"><a href="#cb15-118" aria-hidden="true" tabindex="-1"></a>quantity. One person making a single count can change the total even if they</span>
+<span id="cb15-119"><a href="#cb15-119" aria-hidden="true" tabindex="-1"></a>make no other counts in the thread. A better way is to look at the</span>
+<span id="cb15-120"><a href="#cb15-120" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">effective</span><span class="co">](https://en.wikipedia.org/wiki/Effective_number_of_parties)</span> number of</span>
+<span id="cb15-121"><a href="#cb15-121" aria-hidden="true" tabindex="-1"></a>counters taking part in a thread. The effective number takes into account how</span>
+<span id="cb15-122"><a href="#cb15-122" aria-hidden="true" tabindex="-1"></a>skewed the distribution of participants is. If 10 people count 100 times each in</span>
+<span id="cb15-123"><a href="#cb15-123" aria-hidden="true" tabindex="-1"></a>a thread, then both the actual and the effective number of counters is 10. If</span>
+<span id="cb15-124"><a href="#cb15-124" aria-hidden="true" tabindex="-1"></a>instead two people count 496 times each, and 8 people count once each, then the</span>
+<span id="cb15-125"><a href="#cb15-125" aria-hidden="true" tabindex="-1"></a>effective number of counters is 2.02, because two people made basically all the</span>
+<span id="cb15-126"><a href="#cb15-126" aria-hidden="true" tabindex="-1"></a>counts.</span>
+<span id="cb15-127"><a href="#cb15-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-128"><a href="#cb15-128" aria-hidden="true" tabindex="-1"></a>We can find the submission with the highest number of effective counters.</span>
+<span id="cb15-129"><a href="#cb15-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-132"><a href="#cb15-132" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-133"><a href="#cb15-133" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting.analysis <span class="im">import</span> effective_number_of_counters</span>
+<span id="cb15-134"><a href="#cb15-134" aria-hidden="true" tabindex="-1"></a>effective_counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).<span class="bu">apply</span>(effective_number_of_counters)</span>
+<span id="cb15-135"><a href="#cb15-135" aria-hidden="true" tabindex="-1"></a>submission_id <span class="op">=</span> effective_counters.idxmax()</span>
+<span id="cb15-136"><a href="#cb15-136" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> (<span class="ss">f"The thread with the highest number of effective counters is "</span></span>
+<span id="cb15-137"><a href="#cb15-137" aria-hidden="true" tabindex="-1"></a>     <span class="ss">f"</span><span class="sc">{</span>submissions<span class="sc">.</span>query(<span class="st">'submission_id == @submission_id'</span>)[<span class="st">'link'</span>]<span class="sc">.</span>iat[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">, "</span></span>
+<span id="cb15-138"><a href="#cb15-138" aria-hidden="true" tabindex="-1"></a>     <span class="ss">f"with </span><span class="sc">{</span>effective_counters<span class="sc">.</span>loc[submission_id]<span class="sc">:.1f}</span><span class="ss"> counters."</span>)</span>
+<span id="cb15-139"><a href="#cb15-139" aria-hidden="true" tabindex="-1"></a>Markdown(s)</span>
+<span id="cb15-140"><a href="#cb15-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-141"><a href="#cb15-141" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-142"><a href="#cb15-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-143"><a href="#cb15-143" aria-hidden="true" tabindex="-1"></a>We can also compare the total and the effective number of counters</span>
+<span id="cb15-144"><a href="#cb15-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-147"><a href="#cb15-147" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-148"><a href="#cb15-148" aria-hidden="true" tabindex="-1"></a>total_counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size()</span>
+<span id="cb15-149"><a href="#cb15-149" aria-hidden="true" tabindex="-1"></a>merged <span class="op">=</span> (pd.concat([effective_counters, total_counters], axis<span class="op">=</span><span class="dv">1</span>))</span>
+<span id="cb15-150"><a href="#cb15-150" aria-hidden="true" tabindex="-1"></a>merged.columns <span class="op">=</span> [<span class="st">'Effective counters'</span>, <span class="st">'Actual counters'</span>]</span>
+<span id="cb15-151"><a href="#cb15-151" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-152"><a href="#cb15-152" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-155"><a href="#cb15-155" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-156"><a href="#cb15-156" aria-hidden="true" tabindex="-1"></a>table <span class="op">=</span> merged.describe().transpose()[[<span class="st">"mean"</span>, <span class="st">"50%"</span>, <span class="st">"max"</span>]]</span>
+<span id="cb15-157"><a href="#cb15-157" aria-hidden="true" tabindex="-1"></a>Markdown(table.to_markdown(floatfmt<span class="op">=</span><span class="st">".1f"</span>, headers<span class="op">=</span>[<span class="st">"**Mean**"</span>, <span class="st">"**Median**"</span>, <span class="st">"**Maximum**"</span>]))</span>
+<span id="cb15-158"><a href="#cb15-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-159"><a href="#cb15-159" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-160"><a href="#cb15-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-161"><a href="#cb15-161" aria-hidden="true" tabindex="-1"></a>We can see that both the total and effective number of counters have a median</span>
+<span id="cb15-162"><a href="#cb15-162" aria-hidden="true" tabindex="-1"></a>that is lower than the mean, indicating that the distributions have long tails</span>
+<span id="cb15-163"><a href="#cb15-163" aria-hidden="true" tabindex="-1"></a>to the right. We can plot these, which is done on figure @fig-kdes. You can</span>
+<span id="cb15-164"><a href="#cb15-164" aria-hidden="true" tabindex="-1"></a>clearly see how much more spread out the actual number of counters is compared</span>
+<span id="cb15-165"><a href="#cb15-165" aria-hidden="true" tabindex="-1"></a>with the effective number. The effective number is really sharply peaked at 2,</span>
+<span id="cb15-166"><a href="#cb15-166" aria-hidden="true" tabindex="-1"></a>with 25% of the counts lying in the range 2-2.4.</span>
+<span id="cb15-167"><a href="#cb15-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-170"><a href="#cb15-170" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-171"><a href="#cb15-171" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-kdes</span></span>
+<span id="cb15-172"><a href="#cb15-172" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: The distributions of the number of effective and actual counters in each thread</span></span>
+<span id="cb15-173"><a href="#cb15-173" aria-hidden="true" tabindex="-1"></a>limits <span class="op">=</span> [<span class="dv">2</span>, <span class="dv">50</span>]</span>
+<span id="cb15-174"><a href="#cb15-174" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> merged.plot.kde(ind<span class="op">=</span>np.linspace(<span class="op">*</span>limits))</span>
+<span id="cb15-175"><a href="#cb15-175" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(<span class="op">*</span>limits)</span>
+<span id="cb15-176"><a href="#cb15-176" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(bottom<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb15-177"><a href="#cb15-177" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb15-178"><a href="#cb15-178" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-179"><a href="#cb15-179" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-180"><a href="#cb15-180" aria-hidden="true" tabindex="-1"></a>We can also plot how the effective and actual number of counters have evolved</span>
+<span id="cb15-181"><a href="#cb15-181" aria-hidden="true" tabindex="-1"></a>throughout r/counting history; this is shown on figure @fig-rolling. The actual</span>
+<span id="cb15-182"><a href="#cb15-182" aria-hidden="true" tabindex="-1"></a>and effective number of counters track each other quite closely across threads.</span>
+<span id="cb15-183"><a href="#cb15-183" aria-hidden="true" tabindex="-1"></a>It seems there's been a gradual decline in the number of counters participating</span>
+<span id="cb15-184"><a href="#cb15-184" aria-hidden="true" tabindex="-1"></a>in each thread, but with spikes of activity. It looks like there's a sustained</span>
+<span id="cb15-185"><a href="#cb15-185" aria-hidden="true" tabindex="-1"></a>uptick right now; let's hope we keep it up! One thing I was expecting to see was</span>
+<span id="cb15-186"><a href="#cb15-186" aria-hidden="true" tabindex="-1"></a>clear spikes at 100k threads, since running isn't allowed on those. And those</span>
+<span id="cb15-187"><a href="#cb15-187" aria-hidden="true" tabindex="-1"></a>spikes just aren't apparent in the data.</span>
+<span id="cb15-188"><a href="#cb15-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-191"><a href="#cb15-191" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-192"><a href="#cb15-192" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-rolling</span></span>
+<span id="cb15-193"><a href="#cb15-193" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: How the number of effective and actual counters has changed through r/counting history, a 10-thread rolling average</span></span>
+<span id="cb15-194"><a href="#cb15-194" aria-hidden="true" tabindex="-1"></a>bar <span class="op">=</span> merged.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb15-195"><a href="#cb15-195" aria-hidden="true" tabindex="-1"></a>bar.set_index((bar.index <span class="op">+</span> <span class="dv">15</span>)<span class="op">/</span><span class="dv">1000</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb15-196"><a href="#cb15-196" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> bar.rolling(<span class="dv">10</span>).mean().plot(secondary_y<span class="op">=</span>[<span class="st">'Effective counters'</span>], alpha<span class="op">=</span><span class="fl">0.7</span>)</span>
+<span id="cb15-197"><a href="#cb15-197" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(left<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb15-198"><a href="#cb15-198" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Count [millions]"</span>)</span>
+<span id="cb15-199"><a href="#cb15-199" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb15-200"><a href="#cb15-200" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-201"><a href="#cb15-201" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-202"><a href="#cb15-202" aria-hidden="true" tabindex="-1"></a>We can also plot the effective number of counters as a function of the actual</span>
+<span id="cb15-203"><a href="#cb15-203" aria-hidden="true" tabindex="-1"></a>number of counters. You can see generally, the more actual counters there are in</span>
+<span id="cb15-204"><a href="#cb15-204" aria-hidden="true" tabindex="-1"></a>a thread, there more effective counters there will be, but the relationship is</span>
+<span id="cb15-205"><a href="#cb15-205" aria-hidden="true" tabindex="-1"></a>fairly noisy.</span>
+<span id="cb15-206"><a href="#cb15-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-209"><a href="#cb15-209" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb15-210"><a href="#cb15-210" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> np.polyfit(merged[<span class="st">'Actual counters'</span>], merged[<span class="st">'Effective counters'</span>], <span class="dv">1</span>, full<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb15-211"><a href="#cb15-211" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.regplot(x<span class="op">=</span><span class="st">'Actual counters'</span>, y<span class="op">=</span><span class="st">'Effective counters'</span>, data<span class="op">=</span>merged,</span>
+<span id="cb15-212"><a href="#cb15-212" aria-hidden="true" tabindex="-1"></a>                 line_kws<span class="op">=</span>{<span class="st">"color"</span>: <span class="st">"k"</span>, <span class="st">"linestyle"</span>: <span class="st">"--"</span>})</span>
+<span id="cb15-213"><a href="#cb15-213" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.array([<span class="dv">0</span>, <span class="dv">100</span>])</span>
+<span id="cb15-214"><a href="#cb15-214" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(<span class="dv">0</span>, <span class="dv">100</span>)</span>
+<span id="cb15-215"><a href="#cb15-215" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(bottom<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb15-216"><a href="#cb15-216" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Actual vs effective number of counters'</span>)</span>
+<span id="cb15-217"><a href="#cb15-217" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb15-218"><a href="#cb15-218" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
