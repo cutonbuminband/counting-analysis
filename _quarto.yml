@@ -13,6 +13,7 @@ website:
         - separators.qmd
         - runs.qmd
         - network.qmd
+        - counting_counters.qmd
     - examples.qmd
   page-footer:
     center:
@@ -34,6 +35,3 @@ format:
     reference-location: margin
     citation-location: margin
     highlight-style: pygments
-
-execute:
-  freeze: auto
