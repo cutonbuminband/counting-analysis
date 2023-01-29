@@ -1,0 +1,99 @@
+* Side threads
+** Adding them to the DB
+I want to get to a stage where the side threads and the main thread live in the same database. That involves updating the submissions table with a "thread_id" column to reference **which** thread we're currently working with, as well as adding a side thread table that describes each side thread. But I'm not there yet.
+#+begin_src jupyter-python
+  submissions = pd.read_sql('select * from submissions order by integer_id', db)
+  submissions
+#+end_src
+
+
+#+begin_src jupyter-python
+  if 'index' in submissions.columns:
+      submissions.drop('index', inplace=True, axis=1)
+  if 'thread_id' not in submissions.columns:
+      submissions['thread_id'] = "uuikz"
+  submissions.to_sql("submissions", db, index=False, if_exists="replace")
+#+end_src
+
+** Aggregated top counters
+In the meantime, I'd like to plot the aggregated top counters. Basskro has provided them as a bunch of csvs, so we can start by grabbing them all together:
+#+begin_src jupyter-python
+  import os
+  from pathlib import Path
+  folder = Path("/home/sten/Downloads/side_threads")
+  dfs = []
+  filenames = os.listdir(folder)
+  for idx, filename in enumerate(filenames):
+      df = pd.read_csv(folder / filename, usecols=[1, 2], header=None)
+      df['thread'] = idx
+      dfs.append(df)
+  df = pd.concat(dfs)
+  df.columns = ["username", "timestamp", "thread"]
+  ax = plots.hoc_by_time(df)
+  plt.savefig('plots/st_hoc_cumulative_by_time.png', bbox_inches='tight')
+#+end_src
+
+** Plotting the most frequent side thread over time
+#+begin_src jupyter-python
+  import os
+  from pathlib import Path
+  folder = Path("/home/sten/Downloads/side_threads")
+  filenames = [fname for fname in os.listdir(folder) if fname != "decimal_log.csv"]
+  column_names = [x.replace("_log.csv", "").replace("_", " ") for x in filenames]
+  dfs = []
+  for column_name, filename in zip(column_names, filenames):
+      df = pd.read_csv(folder / filename, usecols=[1, 2], header=None, names=['username', 'timestamp'])
+      df['thread'] = column_name
+      df['date'] = pd.to_datetime(df['timestamp'], unit='s', utc=True)
+      df.set_index('date', inplace=True)
+      dfs.append(df)
+  df = pd.concat(dfs)
+  df["username"] = df["username"].apply(counters.apply_alias)
+  df.sort_index(inplace=True)
+  window = '30d'
+  freq = '12h'
+  ngroups = 25
+  groups = df.groupby('thread').count()['timestamp'].sort_values(ascending=False).index
+#+end_src
+
+#+begin_src jupyter-python
+  moving_total = pd.get_dummies(df['thread']).rolling(window)[groups[:ngroups]].sum()
+  one_hot = pd.get_dummies(moving_total.resample(freq).mean().idxmax(axis=1))
+  columns = sorted(one_hot.columns, key = lambda x: list(groups).index(x))
+  fig, ax = plt.subplots(1)
+  one_hot[columns].plot.area(ax=ax, color=sns.color_palette('colorblind'), lw=0)
+  plt.legend(bbox_to_anchor = (1.01, 0.85))
+  plt.ylim(0.1, 1)
+  ax.set_title('Most popular side thread on r/c (30d rolling count)')
+  plt.tick_params(left=False, labelleft=False)
+  plt.savefig('plots/side_thread_popularity_all.png', bbox_inches='tight', dpi=300)
+#+end_src
+
+#+end_src
+
+** Cumulative side thread counts
+#+begin_src jupyter-python
+  cumulative = pd.get_dummies(df['thread'])[groups[:ngroups]].resample(freq).sum().expanding().sum()
+  fig, ax = plt.subplots(1, figsize=(10,8))
+  cycle = cycler(color = sns.color_palette('colorblind')) * cycler(linestyle=["-", "--", "-."])
+  ax.set_prop_cycle(cycle)
+  cumulative.plot(ax=ax)
+  plt.legend(bbox_to_anchor = (1.02, 1.0))
+  ax.set_ylabel('Cumulative counts')
+  ax.set_xlabel('')
+  ax.set_ylim(bottom=0)
+  ax.set_title('Cumulative counts in the top 25 side threads')
+  plt.savefig('plots/side_thread_cumulative_counts.png', bbox_inches='tight', dpi=300)
+#+end_src
+
+** Tug of war
+#+begin_src jupyter-python
+  tow = pd.read_csv(folder / 'tug_of_war_log.csv',header=None, usecols=[0, 1, 2, 3, 4], dtype={0: float, 1: str, 2: int, 3: str, 4: str})
+  tow['date'] = pd.to_datetime(foo[2], unit='s', utc=True)
+  tow.set_index('date', inplace=True)
+  # tow.loc[foo[0] > 6000, 0] = np.nan
+  # tow.loc[foo[0] < -10000, 0] = np.nan
+  tow[0].resample('30min').mean().plot()
+  plt.title('Tug of war count by date')
+  plt.savefig('plots/tow_status.png', bbox_inches='tight', dpi=300)
+#+end_src

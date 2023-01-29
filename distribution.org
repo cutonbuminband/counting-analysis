@@ -1,0 +1,372 @@
+#+PROPERTY: header-args:jupyter-python  :session distribution :kernel reddit
+#+PROPERTY: header-args    :pandoc t :tangle yes
+
+
+* Introduction
+-
+
+We'll start off with some code to import the relevant packages and load the data
+
+#+begin_src jupyter-python
+#| code-fold: true
+#| code-summary: "Code for importing packages and loading data"
+from pathlib import Path
+import pandas as pd
+import sqlite3
+import matplotlib.pyplot as plt
+import numpy as np
+from rcounting import counters, analysis, graph_tools
+import seaborn as sns
+sns.set_theme()
+from IPython.display import Markdown
+data_directory = Path("../data")
+import networkx as nx
+import itertools
+
+db = sqlite3.connect(data_directory / "counting.sqlite")
+counts = pd.read_sql("select username from comments where position > 0 order by timestamp", db)
+counts["username"] = counts["username"].apply(counters.apply_alias)
+#+end_src
+
+#+RESULTS:
+
+* Most common counts
+#+begin_src jupyter-python
+  counts = pd.read_sql("select username, position % 1000 as position from comments where username != '[deleted]' and position > 0 order by timestamp", db)
+  counts["username"] = counts["username"].apply(apply_alias)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+  aggregated = counts.groupby("position")["username"].nunique()
+  print(aggregated.sort_values(ascending=False).head(10).to_markdown(headers=["**Count**", "**No. of different counters**"]))
+  ax = aggregated.iloc[0:1000].plot(ylabel="Number of different counters", xlabel="Thread position")
+  ax.set_xlim(-5, 1000)
+  plt.savefig("plots/position_v_ncounters.png", bbox_inches='tight')
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+begin_example
+  |   **Count** |   **No. of different counters** |
+  |------------:|--------------------------------:|
+  |          41 |                             684 |
+  |          51 |                             679 |
+  |          43 |                             678 |
+  |          49 |                             677 |
+  |          75 |                             676 |
+  |          37 |                             674 |
+  |          45 |                             671 |
+  |          73 |                             670 |
+  |          71 |                             668 |
+  |          82 |                             664 |
+#+end_example
+[[file:./.ob-jupyter/ccab89355420994fa320ec421fc7c7b03c652168.png]]
+:END:
+#+begin_src jupyter-python
+  summary = counts.groupby("username")["position"].agg(mode=pd.Series.mode,
+                                                       frequency=lambda x: x.value_counts().iloc[0])
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+  print(summary.sort_values("frequency", ascending=False).head(10).to_markdown(headers=["**username**", "**Most common number**", "**frequency**"]))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  | **username**     |   **Most common number** |   **frequency** |
+  |:-----------------|-------------------------:|----------------:|
+  | davidjl123       |                        1 |             704 |
+  | thephilsblogbar2 |                        3 |             637 |
+  | Countletics      |                      820 |             454 |
+  | Antichess        |                        2 |             330 |
+  | GarlicoinAccount |                      462 |             263 |
+  | Smartstocks      |                      487 |             263 |
+  | TheNitromeFan    |                       23 |             243 |
+  | nonsensy         |                      700 |             193 |
+  | atomicimploder   |                       16 |             170 |
+  | TehVulpez        |                        9 |             136 |
+#+end_example
+
+#+begin_src jupyter-python
+  print(summary.loc["ClockButTakeOutTheL"])
+  clock = counts.value_counts().loc["ClockButTakeOutTheL"].sort_index().to_frame().reset_index()
+  clock["parity"] = [["even", "odd"][val] for val in clock.index % 2]
+  # clock[::2].plot(ylabel="Number of counts")
+  ax = sns.lineplot(data=clock, y=0, x='position', hue="parity")
+  ax.set_ylabel("Number of counts")
+  plt.savefig("plots/clock_counts.png", bbox_inches='tight')
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: mode         564
+: frequency     76
+: Name: ClockButTakeOutTheL, dtype: object
+[[file:./.ob-jupyter/7846837837c0b3328b2a8b535151fdb7ce205f25.png]]
+:END:
+
+* Odds and evens
+#+begin_src jupyter-python
+  counts = pd.read_sql("select username, position, submission_id from comments "
+                       "where position > 0 "
+                       "order by timestamp", db)
+  counts['username'] = counts['username'].apply(counters.apply_alias)
+#+end_src
+
+
+#+begin_src jupyter-python
+  indices = counts.groupby('username').size().sort_values(ascending=False).index
+  top_counters = [x for x in indices if not counters.is_banned_counter(x)][:50]
+  counts["is_even"] = (counts["position"] % 2 == 0)
+  offsets = ["1gm10t", "7hn2tm", "b471wg", "bz6r0g", "d6pgni", "ebnh39", "grggc0", "oj50hj", "ob4a2h", "t81gug"]
+  for offset in offsets:
+      counts.loc[counts["submission_id"] == offset, 'is_even'] = 1 - counts.loc[counts["submission_id"] == offset, 'is_even']
+  counts['is_odd'] = 1 - counts['is_even']
+  subset = counts.query("username in @top_counters")
+  table = subset[['username', 'is_even', 'is_odd']].groupby('username').sum()
+  table.columns=["n_even", "n_odd"]
+  table['difference'] = table['n_even'] - table['n_odd']
+  table['relative_difference'] = (table['n_even'] - table['n_odd']) / (table['n_even'] + table['n_odd']) * 100
+  headers=["**Username**", "**n_(even)**", "**n_(odd)**", "**Difference**", "**Relative Difference (%)**"]
+  print(table.sort_values(by='difference').head().to_markdown(headers=headers))
+  print(table.sort_values(by='difference', ascending=False).head().to_markdown(headers=headers))
+  table['absolute_difference'] = abs(table['relative_difference'])
+  print(table.sort_values(by='absolute_difference')[['n_even', 'n_odd', 'difference', 'relative_difference']].head().to_markdown(headers=headers))
+#+end_src
+
+#+begin_src jupyter-python
+  username = 'CutOnBumInBandHere9'
+  part_table = counts.query("username == @username")[['username', 'is_even', 'is_odd']].groupby('username').sum()
+  part_table.columns=["n_even", "n_odd"]
+  part_table['difference'] = part_table['n_even'] - part_table['n_odd']
+  part_table['relative_difference'] = (part_table['n_even'] - part_table['n_odd']) / (part_table['n_even'] + part_table['n_odd']) * 100
+  headers=["**Username**", "**n_(even)**", "**n_(odd)**", "**Difference**", "**Relative Difference (%)**"]
+  print(part_table.sort_values(by='difference').head().to_markdown(headers=headers))
+#+end_src
+
+* Count distribution
+We'll start by loading the counts. We only need the thread position and the username
+#+begin_src jupyter-python
+  counts = pd.read_sql("select username, position from comments "
+                       "where position > 0 "
+                       "order by timestamp", db)
+#+end_src
+
+#+begin_src jupyter-python
+  counts['username'] = counts['username'].apply(apply_alias)
+  counts["position"] = (counts["position"] - 1) % 1000 + 1
+#+end_src
+
+Since we want to look at people's distribution of counts, we should focus on counters with a significant number of counts
+#+begin_src jupyter-python
+  totals = counts.groupby('username').size().sort_values(ascending=False)
+  usernames = [x for x in totals[totals >= 1000].index if not is_banned_counter(x)]
+  subset = counts.query("username in @usernames")
+#+end_src
+
+
+#+begin_src jupyter-python
+  def count_missing(group):
+    return len(set(range(1, 1001)) - set(group["position"]))
+
+  missing_values = subset.groupby("username").apply(count_missing)
+  print(sum(missing_values == 0))
+  incomplete = missing_values[missing_values > 0]
+#+end_src
+
+#+begin_src jupyter-python
+  combined = pd.concat([subset.groupby("username").size(), missing_values], axis=1)
+  combined.columns = ["counts", "n_missing"]
+  print(combined.query("n_missing > 0").sort_values("counts", ascending=False))
+  target = combined.query("n_missing == 1").copy()
+#+end_src
+
+
+#+begin_src jupyter-python
+target["missing_value"] = pd.Series(target.index.map(lambda x: (set(range(1, 1001)) - set(subset.query("username == @x")["position"])).pop()), index=target.index)
+print(target.drop('n_missing', axis=1).sort_values('counts', ascending=False).to_markdown(headers=["**Counter**", "Total Counts", "**Missing Value**"]))
+
+#+end_src
+
+#+begin_src jupyter-python
+username = "Krazeli"
+comments = pd.read_sql(f"select * from comments where username == '{username}'", db)
+comments[comments['body'].apply(parsing.find_count_in_text, raise_exceptions=False) % 1000 == 280]
+#+end_src
+
+#+begin_src jupyter-python
+print(combined.query("n_missing == 0").sort_values('counts'))
+#+end_src
+
+#+begin_src jupyter-python
+new_target = combined.query("0 < n_missing <= 5").copy()
+new_target['missing_values'] = pd.Series(new_target.index.map(lambda x: (set(range(1, 1001)) - set(subset.query("username == @x")["position"]))), index=new_target.index)
+print(new_target.sort_values(['n_missing', 'counts']).to_markdown(headers=["**Counter**", "**Total counts**", "**No. of missing values**", "**Missing values**"]))
+#+end_src
+
+#+begin_src jupyter-python
+  username = "Nekyiia"
+  comments = pd.read_sql(f"select comments.* from comments join counters on comments.username == counters.username where counters.canonical_username == '{username}'", db)
+#+end_src
+
+#+begin_src jupyter-python
+comments['imputed_count'] = comments['body'].apply(parsing.find_count_in_text, raise_exceptions=False)
+comments.query('imputed_count % 1000 == 5')
+#+end_src
+
+** Distribution of final digits
+#+begin_src jupyter-python
+counts['reduced_position'] = (counts['position'] + 1) // 2
+#+end_src
+
+#+begin_src jupyter-python
+counts.query("username == 'davidjl123'").groupby('reduced_position').size()
+#+end_src
+
+#+begin_src jupyter-python
+  for username in usernames[:5]:
+      (counts.query("username == @username").groupby('reduced_position').size() /  len(counts.query("username == @username")) * 500).plot(label=username)
+  plt.legend()
+  plt.xlabel("Reduced position")
+  plt.ylabel("Relative frequency")
+  plt.ylim(0, 2)
+  plt.savefig('plots/thread_position.png', bbox_inches='tight')
+#+end_src
+
+#+begin_src jupyter-python
+  username = "Ezekiel134"
+  current_subset = counts.query("username == @username")
+  frequencies = current_subset.groupby('reduced_position').size() / len(current_subset) * 500
+  frequencies.plot(label=username)
+  plt.title(username)
+  plt.xlabel("Reduced position")
+  plt.ylabel("Relative frequency")
+  # plt.ylim(0, 2)
+  plt.savefig(f'plots/thread_position_{username}.png', bbox_inches='tight')
+  abs(frequencies - 1).mean() * 100
+#+end_src
+
+
+#+begin_src jupyter-python
+  MAE = []
+  for username in usernames[:5]:
+      frequencies = (counts.query("username == @username").groupby('reduced_position').size() /  len(counts.query("username == @username")) * 500)
+      MAE.append((abs(frequencies - 1).mean()))
+  print(pd.Series(MAE, index=usernames[:5]).sort_values().to_markdown(headers=["**Counter**", "**Mean Absolute Deviation**"], floatfmt=".3f"))
+#+end_src
+
+** Post
+
+A couple of FTF's ago, u/ClockButTakeOutTheL asked an [interesting question](/comments/wmgcxo/comment/iko8etq/?context=3) about the distribution of counts which I haven't had time to look at before now. The question was to do with the distribution of positions within a thread, and here's a wall of text about that. As with the [odd and even]() numbers, these stats are very sensitive to errors in the data since thy depend on individual, specific comments. In particular
+
+- **If there are errors in a chain, the position in the post and the count posted won't match**. In these cases, the count is the one for the thread position, and not what was posted in the comment (see an example of this further down)
+- **If there are aliases I don't know about, counts from different usernames will be combined incorrectely**
+
+With that said, I've found 79 counters who have counted every number between 1 and 1000. The counter with the fewest number of counts who's still managed to count every number is u/cfcgtyk, who's managed to do it with just over 5000 counts.
+
+The counter with the most counts who's still missing a value is u/whit4you. She has more than 11k counts, but never counted a number ending in 998. Here's a table of all the counters I've found that are missing up to five values
+
+| **Counter**     |     **Total counts** |     **No. of missing values** | **Missing values**        |
+| :-------------- | -------------------: | ----------------------------: | :------------------------ |
+| torncolours     |                 4338 |                             1 | 41                        |
+| cob331          |                 5143 |                             1 | 1000                      |
+| gordonpt8       |                 5953 |                             1 | 128                       |
+| Krazeli         |                 8303 |                             1 | 280                       |
+| whit4you        |                11492 |                             1 | 998                       |
+| Nekyiia         |                 6663 |                             2 | 5, 11                     |
+| MetArtScroll    |                 9923 |                             2 | 54, 56                    |
+| 949paintball    |                10444 |                             2 | 991, 995                  |
+| idunnowhy9000   |                10824 |                             2 | 952, 999                  |
+| foxthechicken   |                 4877 |                             3 | 253, 255, 257             |
+| teddymaniacc    |                 5788 |                             3 | 9, 11, 379                |
+| Myoniora        |                 2557 |                             4 | 57, 525, 527, 529         |
+| heeric          |                 3591 |                             4 | 9, 18, 20, 61             |
+| caramelly24     |                 4259 |                             5 | 12, 46, 123, 213, 215     |
+
+I've checked most of these, but there could be errors somewhere. u/Krazeli is an edge case since he did count a number ending in 280 in the 95k thread. Unfortunately a double count [here](https://www.reddit.com/r/counting/comments/1re781/comment/cdmghq4/?context=99) means that it's the 281st count in the thread, so that's what I've recorded it as. It seems weird to me that u/cob331 should have managed to count everything apart from a get, but after looking through the hall of fame I think it's right.
+
+I've also [plotted](https://imgur.com/0iNPMen.png) the distribution of counts in each thread for the top 5 counters. To avoid the jaggedness caused by odd/even runs I've combined values pairwise, so that each point is the frequency of an odd value and its neighbouring even value, and the get and the assist are in the same bin. The plot is normalised, so that if every count occurred equally often, there would just be a flat line at y = 1 
+
+Overall two things stand out to me in this plot
+
+- David's insane peak early in each thread, caused by his practice lately of mainly just leaving one or two comments per thread, early on. And similarly, his sniping skills at the end of a thread, which contribute to the smaller peak on the right.
+- Just how consistent phil's count distribution is: 
+
+The consistency of each counter can be summarised by looking at the mean absolute deviation of each frequency from the hypothetical 1 of the flat distribution, which I've done in the following table:
+
+| **Counter**      |   **Mean Absolute Deviation** |
+|:-----------------|------------------------------:|
+| thephilsblogbar2 |                         0.017 |
+| GarlicoinAccount |                         0.060 |
+| Countletics      |                         0.065 |
+| Antichess        |                         0.089 |
+| davidjl123       |                         0.163 |
+
+That's all for now!
+
+* Least prolific counters with gets
+#+begin_src jupyter-python
+  df = pd.read_sql("select username, submission_id from comments where position > 0 order by timestamp", db)
+  df['username'] = df['username'].apply(apply_alias)
+#+end_src
+
+#+begin_src jupyter-python
+  getters = df.groupby("submission_id").last()
+  gets = getters.reset_index()['username'].value_counts()
+  gets.name = "n_gets"
+  counts = df['username'].value_counts()
+#+end_src
+
+#+begin_src jupyter-python
+  totals = pd.concat([counts.loc[gets.index], gets], axis=1)
+  totals.columns = ["counts", "gets"]
+  headers = ["**username**", "**counts**", "**gets**"]
+  print(totals.sort_values(by='counts').head().to_markdown(headers=headers))
+#+end_src
+
+
+
+A while ago, clock asked which counters with at least one get have the fewest total number of counts. And that's a surprisingly difficult question to answer, because of alt accounts and deleted comments. If I just look through the list, then I get the following as the top 5
+
+| **username**       |   **counts** |   **gets** |
+|:-------------------|-------------:|-----------:|
+| thephilsnipebar    |            1 |          1 |
+| MeNowDealWithIt    |            1 |          1 |
+| Hotshot2k4         |            3 |          1 |
+| ItzTaken           |            4 |          1 |
+| Ralph_Schaosid     |            5 |          1 |
+
+Looking at this list, thephilsnipebar and Ralph_Schaosid are immediately obvious as counting alts. MeNowDealWithIt has made significantly more than one count, but deleted their account before they were picked up by the script, so I have no idea how many. u/Hotshot2k4 seems legit. They made three counts, the first of which was the 54k get. More recently, u/ItzTaken got a [free get](/comments/mlqtr1/_/gtobrvf?context=3) that VitaminB16 left in the 4195k thread. Before that they had made two counts in the 2M era.
+
+All in all we have ~30 counters with a get and less than 100 total counts and ~180 with less than 1000 counts. But again, there's a significant number of counts where I don't know the author, and a significant number of usernames that are unknown aliases.
+
+#+begin_src jupyter-python
+username = "thephilsnipebar"
+
+pd.read_sql(f"select * from comments where username == '{username}'", db)
+#+end_src
+
+#+begin_src jupyter-python
+totals.query('counts < 1000').count()
+#+end_src
+
+#+begin_src jupyter-python
+gets
+#+end_src
+
+#+begin_src jupyter-python
+df['count'] = df.index
+#+end_src
+
+#+begin_src jupyter-python
+first_get = df.groupby('submission_id', sort=False).last().groupby('username').first()
+df["cumcount"] = df.groupby('username').cumcount()
+#+end_src
+
+#+begin_src jupyter-python
+print(first_get.sort_values(by='cumcount', ascending=False).head()['cumcount'].to_markdown(headers=['**username**', '**counts**']))
+#+end_src
