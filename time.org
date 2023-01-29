@@ -17,80 +17,56 @@ The 2d hexbin plot for the whole subreddit makes sense - it'll show when we're r
 I don't know if dst should be in this post or another one. I think I'll push it as a later one, and then in the index mark it as a subsection of this one.
 
 * Introduction
-
+One of the things stored in the database is the precise moment each count was made. And that's interesting because?
 
 
 We'll start off with some code to import the relevant packages and load the data
 
 #+begin_src jupyter-python
-#| code-fold: true
-#| code-summary: "Code for importing packages and loading data"
-from pathlib import Path
-import pandas as pd
-import sqlite3
-import matplotlib.pyplot as plt
-import numpy as np
-from rcounting import counters, analysis, graph_tools
-import seaborn as sns
-sns.set_theme()
-from IPython.display import Markdown
-data_directory = Path("../data")
-import networkx as nx
-import itertools
+  #| code-fold: true
+  #| code-summary: "Code for importing packages and loading data"
+  from pathlib import Path
+  import pandas as pd
+  import sqlite3
+  import matplotlib.pyplot as plt
+  import numpy as np
+  import scipy
+  from rcounting import counters, analysis, graph_tools, units
+  import seaborn as sns
+  sns.set_theme()
+  from IPython.display import Markdown
+  data_directory = Path("../data")
+  import networkx as nx
+  import itertools
 
-db = sqlite3.connect(data_directory / "counting.sqlite")
-counts = pd.read_sql("select username from comments where position > 0 order by timestamp", db)
-counts["username"] = counts["username"].apply(counters.apply_alias)
-#+end_src
-
-#+RESULTS:
-
-* Time of day
-
-#+begin_src jupyter-python
-  n = 3
-  counting_users = pd.read_sql('select canonical_username, count() as n '
-                               'from comments join counters '
-                               'on comments.username = counters.username '
-                               'group by canonical_username', db).sort_values('n')
-  top_counters = list(counting_users.tail(n)['canonical_username'])
-
-#+end_src
-
-#+begin_src jupyter-python
-  username = "Ezekiel134"
-  top_counters = [username]
-  query = ("select counters.canonical_username as username, comments.timestamp "
-           "from comments join counters "
-           "on comments.username = counters.username "
-           f"where counters.canonical_username in ({'?, '*(len(top_counters) - 1)}?) "
-           "order by timestamp")
-
-  df = pd.read_sql(query, db, params=top_counters)
+  db = sqlite3.connect(data_directory / "counting.sqlite")
+  counts = pd.read_sql("select username, timestamp from comments order by timestamp", db)
+  counts["username"] = counts["username"].apply(counters.apply_alias)
 #+end_src
 
 #+begin_src jupyter-python
   from rcounting import analysis
-  offset = 7 * units.HOUR
+  offset = 0
   fig, ax = plt.subplots(1)
   nbins = int(units.DAY / 30)
   colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-  df['time'] = (df['timestamp'] - offset) % units.DAY
-  x, kde = analysis.fft_kde(df['time'], nbins, kernel="normal_distribution", sigma=0.02)
-  ax.fill_between(x, kde * len(df), color=colors[0], alpha=0.8)
-  ax.plot(x, kde, label=username, color=colors[0], lw=2)
+  counts['time'] = (counts['timestamp'] - offset) % units.DAY
+  dt = counts['timestamp'].iat[-1] - counts['timestamp'].iat[0]
+  x, kde = analysis.fft_kde(counts['time'], nbins, kernel="normal_distribution", sigma=0.01)
+  ax.fill_between(x, kde * len(counts) / dt * units.DAY * units.MINUTE, color=colors[0], alpha=0.8)
   intervals = range(0, 25, 3)
   ax.set_xlim(0, units.DAY + 1)
   ax.set_xticks([x * units.HOUR for x in intervals])
   ax.set_xticklabels([f"{x:02d}:00" for x in intervals])
-  ax.set_ylabel("Counting rate [arbitrary units]")
-  ax.legend(loc='upper left')
+  ax.set_xlabel("Time of day (UTC)")
+  ax.set_ylabel("Average rate [counts/minute]")
   ax.set_ylim(bottom=0)
-  plt.title(f"{username} counts throughout the day (EST)")
-  mean = scipy.stats.circmean(df['time'], high=units.DAY)
+  # plt.title(f"{username} counts throughout the day (EST)")
+  mean = scipy.stats.circmean(counts['time'], high=units.DAY)
   ax.axvline(mean, color='k', linestyle='--')
-  plt.savefig(f'plots/counting_times_{username}_kde_with_mean.png', bbox_inches='tight')
-
+  hours, rem = divmod(mean, 3600)
+  minutes, seconds = divmod(rem, 60)
+  print(hours, minutes, seconds)
 #+end_src
 
 
