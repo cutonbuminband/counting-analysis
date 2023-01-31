@@ -2,7 +2,7 @@
 title: "Counting counters"
 ---
 
-I've previously described r/counting as a collaborative idle game, and that for
+I've previously described r/counting as a collaborative incremental game, and that for
 me sums up the essence of counting fairly well. A natural question to ask about
 the game is how many people have played over the years
 
