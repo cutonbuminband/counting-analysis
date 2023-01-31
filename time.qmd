@@ -178,11 +178,17 @@ rolling = rolling.resample('7d').mean()
 sns.set_theme()
 fig, ax = plt.subplots()
 rolling["seconds_to_midnight"] = units.DAY - rolling["time_of_day"]
-ax = sns.scatterplot(x="numerical_date", y="seconds_to_midnight", data=rolling)
+ax = sns.regplot(x="numerical_date", y="seconds_to_midnight", data=rolling)
 prettify_timeseries(ax)
 
 ```
 
-This analysis shows that from the start of r/counting until 2023, the average time of day of each count has drifted by about six hours. That's not something that was at all apparent from @fig-hexbin, which shows the value of the summary statistic for revealing trends in the data.
+This analysis shows that from the start of r/counting until 2023, the average time of day of each count has drifted by about six hours. More precisely, we can say that
+
+```{python}
+  Markdown(f"The average time has shifted by {np.polyfit(rolling['numerical_date'], rolling['time_of_day'], 1)[0]:.1f} seconds per day.")
+```
+
+This shift is not something that was at all apparent from @fig-hexbin, which shows the value of the summary statistic for revealing trends in the data.
 
 [^1]: I spent 5 minutes playing with $L^2$ norms before I realised I was reinventing the wheel
