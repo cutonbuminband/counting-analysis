@@ -1,31 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://cutonbuminband.github.io/counting-analysis/time.html</loc>
+    <lastmod>2023-01-31T20:46:54.495Z</lastmod>
+  </url>
+  <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/about.html</loc>
-    <lastmod>2023-01-21T22:49:52.135Z</lastmod>
+    <lastmod>2023-01-31T20:46:55.091Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/examples.html</loc>
-    <lastmod>2023-01-21T22:51:03.403Z</lastmod>
+    <lastmod>2023-01-31T20:46:56.083Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/separators.html</loc>
-    <lastmod>2023-01-21T22:51:53.312Z</lastmod>
+    <lastmod>2023-01-31T20:46:56.847Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/runs.html</loc>
-    <lastmod>2023-01-21T22:52:21.372Z</lastmod>
+    <lastmod>2023-01-31T20:46:57.807Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/counting_counters.html</loc>
-    <lastmod>2023-01-21T22:52:46.456Z</lastmod>
+    <lastmod>2023-01-31T20:46:58.791Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/network.html</loc>
-    <lastmod>2023-01-21T22:53:42.324Z</lastmod>
+    <lastmod>2023-01-31T20:47:00.159Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/index.html</loc>
-    <lastmod>2023-01-21T22:54:11.777Z</lastmod>
+    <lastmod>2023-01-31T20:47:01.323Z</lastmod>
   </url>
 </urlset>
