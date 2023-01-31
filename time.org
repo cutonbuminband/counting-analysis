@@ -1,24 +1,8 @@
 #+PROPERTY: header-args:jupyter-python  :session time :kernel reddit
 #+PROPERTY: header-args    :pandoc t :tangle yes
+#+TITLE: Tick tock: looking at counting activity over time
 
-* Notes
-- r/counting time of day all counts kde
-  That lets me explain all the stuff about the kde, about the circular mean and about higher order moments. If I need to I can also look at the dynamics, and discuss a bit about that.
-  - three plots:
-    1. kde with mean
-    2. Mean as a function of time
-    3. Hexbin plot (it's going to be confusing!)
-- The uniform distribution, and which counters are most different from it. Which counters are most similar to it.
-  - Table of relevant counters with L2 difference, average time of count, (hoc position?), total counts?
-  - kde plot of most uniform counter and least uniform counter
-
-The 2d hexbin plot for the whole subreddit makes sense - it'll show when we're running. But Idk if there's any sensible single user to make it for. I'll have to have a think about that.
-
-I don't know if dst should be in this post or another one. I think I'll push it as a later one, and then in the index mark it as a subsection of this one.
-
-* Introduction
-One of the things stored in the database is the precise moment each count was made. And that's interesting because?
-
+Reddit helpfully provides us with time stamps for each comment, so we know exactly when each count on the counting chain was made. This information can be used for a wealth of different things, but in this post I'll focus on what the data can tell us about the daily rhythm of r/counting; about what time of day the subreddit is most active, and about how that has changed throughout the years.
 
 We'll start off with some code to import the relevant packages and load the data
 
@@ -44,250 +28,163 @@ We'll start off with some code to import the relevant packages and load the data
   counts["username"] = counts["username"].apply(counters.apply_alias)
 #+end_src
 
+The first thing we'll look at is how the average rate of counts varies throughout the day. That's shown on [[fig-kde]]. 
+
 #+begin_src jupyter-python
-  from rcounting import analysis
-  offset = 0
+  #| label: fig-kde
+  #| fig-cap: The average rate of counts at different times of day. The horizontal line shows the global average.
+  offset = 6 * units.HOUR
   fig, ax = plt.subplots(1)
   nbins = int(units.DAY / 30)
-  colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
   counts['time'] = (counts['timestamp'] - offset) % units.DAY
   dt = counts['timestamp'].iat[-1] - counts['timestamp'].iat[0]
+  avg_counts_per_day = len(counts) / dt * units.DAY
   x, kde = analysis.fft_kde(counts['time'], nbins, kernel="normal_distribution", sigma=0.01)
-  ax.fill_between(x, kde * len(counts) / dt * units.DAY * units.MINUTE, color=colors[0], alpha=0.8)
-  intervals = range(0, 25, 3)
-  ax.set_xlim(0, units.DAY + 1)
-  ax.set_xticks([x * units.HOUR for x in intervals])
-  ax.set_xticklabels([f"{x:02d}:00" for x in intervals])
-  ax.set_xlabel("Time of day (UTC)")
+  kde = kde * avg_counts_per_day * units.MINUTE
+  ax.fill_between(x, kde, alpha=0.8)
+  ax.axhline(len(counts) / dt * units.MINUTE, color="0.7", linestyle="--")
+  ticks, labels = zip(*[(x * units.HOUR, f"{x:02d}:00") for x in range(0, 25, 3)])
+  def prettify(ax):
+      ax.set_xlim(0, units.DAY + 1)
+      ax.set_xticks(ticks)
+      ax.set_xticklabels(labels)
+      ax.set_ylim(bottom=0)
+      ax.set_xlabel("Time of day (UTC - 6)")
   ax.set_ylabel("Average rate [counts/minute]")
-  ax.set_ylim(bottom=0)
-  # plt.title(f"{username} counts throughout the day (EST)")
-  mean = scipy.stats.circmean(counts['time'], high=units.DAY)
-  ax.axvline(mean, color='k', linestyle='--')
-  hours, rem = divmod(mean, 3600)
-  minutes, seconds = divmod(rem, 60)
-  print(hours, minutes, seconds)
-#+end_src
-
-
-#+begin_src jupyter-python
-  df['date'] = pd.to_datetime(df['timestamp'], unit='s')
-  df.set_index('date', inplace=True)
-  df['x'] = np.cos(df['time'] / units.DAY * 2 * np.pi)
-  df['y'] = np.sin(df['time'] / units.DAY * 2 * np.pi)
-  rolling = df.groupby('username').rolling('14d').mean()
-  rolling['time_of_day'] = (np.arctan2(rolling['y'], rolling['x']) * units.DAY / 2 / np.pi) % units.DAY
+  prettify(ax)
 
 #+end_src
 
+You can see that the counting rate varies quite a bit - the most popular time (early afternoon EST) has an average counting rate that's almost four times higher than the least popular time (late night/early morning EST). It's also nice to have a feeling for what a "normal" rate of counting has been, and it turns that it's on the order of *one count per minute*.
+
+If the rate of counting were perfectly uniform, the chart would be perfectly flat. If every count was always made at precisely 12:00 there would be an infinitely tall spike right at the middle of the graph, and the rate would be zero at all other times. It would be nice to be able to quantify just how far away the distribution is from uniform. Some statisticians have come up with the [[https://en.wikipedia.org/wiki/Coefficient_of_variation][Coefficient of Variation]] to do precisely that[fn:: I spent 5 minutes playing with $L^2$ norms before I realised I was reinventing the wheel]; it says that the variation of a sample of values can be expressed as the ratio of the standard deviation to the mean. If we do this for our time of day data, we obtain
+
 #+begin_src jupyter-python
-  rolling = df.rolling('28d').mean()
-  rolling['time_of_day'] = (np.arctan2(rolling['y'], rolling['x']) * units.DAY / 2 / np.pi) % units.DAY
+f"{np.sqrt(kde.var()) / kde.mean() * 100:.1f}%"
+#+end_src
+
+It's of course also possible to calculate this variation for individual counters, and not just for all counters together. The counters in the top 30 with most and least variation are shown on [[tbl-variation]]
+
+#+begin_src jupyter-python
+  #| label: tbl-variation
+  #| tbl-cap: The most and least regular counters
+  def get_tod_variation(group):
+      x, kde = analysis.fft_kde(group['time'], nbins, kernel="normal_distribution", sigma=0.01)
+      return np.sqrt(kde.var()) / kde.mean()
+
+  top_counters = counts.groupby("username").size().sort_values(ascending=False).index
+  top_counters = [x for x in top_counters if not counters.is_banned_counter(x)][:30]
+  top_30 = counts.query("username in @top_counters")
+  tod_variations = top_30.groupby("username").apply(get_tod_variation).sort_values()
+  head = pd.concat([tod_variations.head(3), tod_variations.tail(3)]) * 100
+  combined = head.to_frame("variation").join(pd.DataFrame(top_counters).reset_index().set_index(0))
+  Markdown(combined.to_markdown(headers=["**Counter**", "**Time of day variation**", "**HOC position**"], floatfmt=".0f"))
+#+end_src
+
+As an aside, you should notice that even the most regular counter has a variation that is higher than the overall variation. Intuitively that makes sense - it's harder for one person to evenely cover all 24 hours of the day than it is for all counters together. We can focus on the single least and most regular counters and look at how their counting rates vary throughout the day. Here's a plot of that:
+
+#+begin_src jupyter-python
   fig, ax = plt.subplots()
-  # for name, group in rolling.reset_index().set_index('date').groupby('username'):
-  #     (units.DAY - group['time_of_day']).plot(ax=ax, marker='.', linestyle='None', label=name)
-  (units.DAY - (rolling['time_of_day'].resample('1h').mean())).plot(ax=ax, marker='.', linestyle='None', label=username)
-  intervals = range(0, 25, 3)
-  ax.set_yticks([x * units.HOUR for x in intervals])
-  ax.set_yticklabels([f"{24-x:02d}:00" for x in intervals])
-  ax.set_ylim([0, units.DAY])
-  plt.legend(loc="upper right")
-  plt.title('Average counting time throughout the day (EST)')
-  plt.savefig(f'plots/counting_times_{username}.png', bbox_inches='tight')
-#+end_src
-
-#+begin_src jupyter-python
-  df['numerical_date'] = mdates.date2num(df.index)
-  intervals = np.arange(0, 25, 3)
-  labels = [f'{24 - x:02d}:00' for x in intervals]
-  df['flipped_time'] = units.DAY - df['time']
-  df.plot.hexbin('numerical_date', 'flipped_time', vmax=75, sharex=False, yticks=units.HOUR * intervals, xlabel="Date", ylabel="Time of Day")
-  plt.gcf().get_axes()[1].remove()
-  ax = plt.gca()
-  ax.xaxis_date()
-  ax.xaxis.major.formatter.scaled[1.0] = "%Y"
-  ax.set_xlim([df['numerical_date'].min(), df['numerical_date'].max()])
-  ax.set_yticklabels(labels)
-  plt.ylim(0, units.DAY)
-  plt.title(f'Distribution of counts for {username} throughout the day (EST)')
-  plt.savefig(f'plots/counting_times_{username}_hexbin.png', bbox_inches='tight')
-#+end_src
-
-I've done another graph thing!
-
-Everyone who's counted regularly on r/c knows that some counters are more active at certain times of day than others. This makes sense, since we live in different time zones, and have different daily routines. For example, Antichess doesn't go to bed until he can hear the dawn chorus outside, while phil is almost always in bed by 11pm. Countletics and atomicimploder both count at work sometimes, but they work very different shifts. I've looked at some of these things before, where I've plotted the distribution of people's counts throughout the day.
-
-[Here's](https://imgur.com/vwrus9l) one for phil, just so people remember what that looks like
-
-You can see that there are very few counts between midnight and 7am, and then the activity increases and stays at a roughly steady level until the early evening, and then there's a big peak after about 6pm, which drops to zero at about 10-11 pm.
-
-To make this plot, I ended up aggregating data from all the time that phil's been active on r/c. So any evolution there might have been over those years is lost. If I want to show the dynamics, I need to do something else. What I'd really like is some kind of summary statistic for a time of day distribution, because then I can plot how that summary statistic varies over time. The first one I'd reach for is the mean, but there's a problem here. We're dealing with circular data, so the linear mean just doesn't work (pop quiz: what's the average time of two events occuring at 23:59 and 00:01?).
-
-Luckily, cleverer people than me have already come up with a solution, and devised the [circular mean](https://en.wikipedia.org/wiki/Circular_mean). You can imagine this as pretending we have a 24h analog clock, and each event is an arrow points to its correct time. The arrow tail is at (0, 0), and the arrow head is at position (x, y), corresponding to whatever time it is. What we want to do is to find the average angle of all the arrows, and to do that we average all the x positions separately, and all the y positions separately, and create a new arrow that points to (average x, average y). The angle we want is then the angle of this arrow.
-
-I can do that for phil's distribution from earlier, and can add the average time to the [plot](https://i.imgur.com/HDTWCGt) with a vertical line. That looks fairly sensible, so we're in good shape.
-
-With this summary statistic in hand, I've plotted how the mean time of day of counts has varied for a number of different people. I've tried to do two lines per graph, with people I think are in similar time zones. Let me know if you'd like me to do more! I've written the time zone of the graph in the title, but I'm not 100% sure that the people involved are actually located in that time zone.
-
-[Here's one for me and phil](https://imgur.com/r2SqlNT). I like how you can see the dots varying together, particularly in December 2021/January 2022. I guess we did do a fair bit of counting together. I'm also impressed by how consistent phil's counting has been - the average counting time shifts a bit over the years, but the variation is much less than in any of the later plots.
-
-[Here's one for misty and username](https://imgur.com/8ej7bD9). The first thing that strikes me is that I didn't know that username had a secret counting career in the last half of 2015. You've been holding back! The second thing that seems apparent is that misty generally counts later in the day than username.
-
-[Here's one for david and urbul](https://imgur.com/aO8NJPz). Both are fairly noisy, and vary quite a bit, but seem to vary together. Most counting occurs betwen midday and 9pm.
-
-And semi-finally, [here's one for antichess and countletics](https://imgur.com/NxJM0WW). Anti likes to count late. So late that the average counting times sometimes moves to the early morning hours - and I don't think that's because he gets up at 6am to count! There's also quite a bit of day-to-day and year-on-year variation, much more than for phil. Countletics has changed a bit over the years as well, and you can see the period in the second half of 202 where he either took a counting break, or counted under an alias I don't know of.
-
-Now, all of this was a prelude to what really prompted me to look at this data. I generally like coming up with a question which could potentially be answered using the counting data, and seeing if it's actually possible, like I did it with my dst post. The question this time was whether it was possible to correlate events in the lives of counters with their counting data. In particular, I happen to know that u/TheNitromeFan has moved more than once during his active time as a counter, and I was wondering whether it would be possible to use the timestamp data to pinpoint when that happened. So, [here's his graph](https://imgur.com/167ECo2)
-
-Can anyone pinpoint the times of his moves from this? Bonus points if you already know the answer and just come up with a plausible-sounding explanation for why it has to be true. Of all the charts like this I've plotted, I think this is the one that most impressively covers all the hours of the day!
-
-Maybe we need to do a bit more thinking. It could be that just using the average counting time throughout the day is throwing out too much information. I can plot a 2d histogram of his counts and [see if that helps](https://imgur.com/PliVKtH). On this graph, a darker colour on a hexagon indicates that more counts took place in the area it covers. We have the time of day on the y-axis, and the date on the x axis. This lets me show how the entire distribution changes over time, rather than just the average value.
-
-Comparing the 2d histogram with the plot of the average value, we can see that they track each other quite nicely, but apart from that I don't think I can say anything sensible about either plot. TNF, you're a very irregular counter!
-
-* DST
-   #+begin_src jupyter-python
-     from datetime import datetime, timedelta
-
-     db = sqlite3.connect('data/counting.sqlite')
-     days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-     def find_nth_weekday(year, month, weekday, n):
-         d = datetime(year, month, 1 + 7 * (n - 1))
-         offset = (days.index(weekday.lower()) - d.weekday()) % 7
-         return d + timedelta(offset)
-
-     years = range(2012, 2022)
-     dst_start = [(find_nth_weekday(year, 3, 'sunday', 2)).timestamp() for year in years]
-     dst_end = [(find_nth_weekday(year, 11, 'sunday', 1)).timestamp() for year in years]
-     one_hour = 3600
-     one_day = 24 * one_hour
-     one_week = 7 * one_day
-     query = "select timestamp - 21600 as timestamp, username from comments where timestamp between {} and {} order by timestamp"
-
-     spring_control_1 = pd.concat([pd.read_sql(query.format(x - 2 * one_week, x - one_week), db) for x in dst_start])
-     spring_no_dst = pd.concat([pd.read_sql(query.format(x - one_week, x), db) for x in dst_start])
-     spring_dst = pd.concat([pd.read_sql(query.format(x, x + one_week), db) for x in dst_start])
-     spring_control_2 = pd.concat([pd.read_sql(query.format(x + one_week, x + 2 * one_week), db) for x in dst_start])
-
-     autumn_control_2 = pd.concat([pd.read_sql(query.format(x - 2 * one_week, x - one_week), db) for x in dst_end])
-     autumn_dst = pd.concat([pd.read_sql(query.format(x - one_week, x), db) for x in dst_end])
-     autumn_no_dst = pd.concat([pd.read_sql(query.format(x, x + one_week), db) for x in dst_end])
-     autumn_control_1 = pd.concat([pd.read_sql(query.format(x + one_week, x + 2*one_week), db) for x in dst_end])
-
-#+end_src
-
-#+begin_src jupyter-python
-  def prepare(df):
-      df['date'] = pd.to_datetime(df['timestamp'], unit='s')
-      df['time_of_day'] = df['timestamp'] % (one_day)
-      df['username'] = df['username'].apply(counters.apply_alias)
-      return df.loc[df['date'].dt.day_name().apply(lambda x: x in weekdays)].copy()
-
-
-  with_dst = pd.concat([autumn_dst, spring_dst])
-  no_dst = pd.concat([autumn_no_dst, spring_no_dst])
-  control_1 = pd.concat([autumn_control_1, spring_control_1])
-  control_2 = pd.concat([autumn_control_2, spring_control_2])
-
-  # with_dst = autumn_dst
-  # no_dst = autumn_no_dst
-  # control_1 = autumn_control_1
-  # control_2 = autumn_control_2
-  weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-#+end_src
-
-
-#+begin_src jupyter-python
-  import scipy.signal
-  n_bins = (24 * 60)
-  x_axis = np.linspace(0, one_day, n_bins + 1, endpoint=True)
-  labels = ['Control with dst', 'With DST', 'No DST', 'Control without dst']
-  fig, ax = plt.subplots(1)
-  signals = []
-  for i, df in enumerate([control_2, with_dst, no_dst, control_1]):
-      df = prepare(df)
-      hist, edges = np.histogram(df['time_of_day'], bins=x_axis)
-      signal = hist / np.sum(hist) * n_bins
-      signals.append(signal)
-      if i not in [2, 3]:
-          continue
-      ax.plot(edges[:-1], signal, label=labels[i])
-  ax.set_xlim(0, 24 * 3600 + 1)
-  ax.set_xticks([0 * hour, 3 * hour, 6 * hour, 9 * hour, 12 * hour,
-                 15 * hour, 18 * hour, 21 * hour, 24 * hour])
-  ax.set_xticklabels(['00:00', '03:00', '06:00', '09:00', '12:00',
-                      '15:00', '18:00', '21:00', '00:00'])
+  for index in [0, -1]:
+      username = tod_variations.index[index]
+      x, kde = analysis.fft_kde(counts.query("username == @username")['time'], nbins, kernel="normal_distribution", sigma=0.01)
+      ax.plot(x, kde / kde.mean(), label=username)
   ax.legend()
-  ax.set_ylabel('Counting rate (arbitrary units)')
+  ax.set_ylabel("Normalized counting rate")
+  prettify(ax)
+#+end_src
+
+It's not too surprising, but those distributions look very different!
+
+** The evolution of the counting distribution
+
+The previous section provided one view into the activity on r/counting and how it's qualitatively different for different people, and at different times of day. One potential issue with that analysis is that it's a static view of the data, and thus ignores any changes there have been over time. Different people have been active at different periods of time in r/counting history, and they've probably tended to count at different times of day. But the foregoing completely ignores that.
+
+To see if (and how) the distributions of counts have changed over time it would in principle be possible to make a plot like [[fig-kde]] for each year or month of activity on r/counting, and then compare them. Alternatively, we could add a third axis to the plot and make a single three-dimensional plot, which might show what we want. I always find those really difficult to read, so that doesn't seem too appealing. On the other hand, if it were possible to show a single distribution in just one dimension instead of two, then we could put lots of those next to each other and build up a two-dimensional plot.
+
+
+What I'll do is split the timestamp of each count into a day component and a *time of day* component, and then plot the day on the x axis and the time of day on the y axis. This is done on figure [[fig-hexbin]] in the form of a hexbin plot: the darker the colour of each hexagon, the more counts were made on that date and at that time of day.
+#+begin_src jupyter-python
+  #| label: fig-hexbin
+  #| fig-cap: An illustration of every count made on the main thread; the darker the colour of any particular hexagon, the more counts were made in the area it covers.
+  sns.set_theme(style="ticks")
+  import matplotlib.dates as mdates
+  counts['date'] = pd.to_datetime(counts['timestamp'], unit='s')
+  counts['numerical_date'] = mdates.date2num(counts['date'])
+  counts['flipped_time'] = units.DAY - counts['time']
+  grid = sns.jointplot(x='numerical_date',
+                       y='flipped_time',
+                       kind="hex",
+                       data=counts,)
+  grid.set_axis_labels()
+  ax = grid.ax_joint
+  def prettify_timeseries(ax):
+      ax.xaxis_date()
+      locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+      formatter = mdates.ConciseDateFormatter(locator)
+      ax.xaxis.set_major_locator(locator)
+      ax.xaxis.set_major_formatter(formatter)
+      ax.set_xlim([counts['numerical_date'].min(), counts['numerical_date'].max()])
+      ax.set_yticks(units.DAY - np.array(ticks))
+      ax.set_yticklabels(labels)
+      ax.set_ylim([0, units.DAY])
+      ax.set_xlabel("Date")
+      ax.set_ylabel("Time of Day (UTC - 6)")
+  prettify_timeseries(ax)
+#+end_src
+
+The plot is a bit difficult to follow, and that's kind of the point -- it's trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; tht's basically the same as what's plotted in [[fig-kde]], but stretched out a bit. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate wa high, but gradually falling to a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with two important peaks.
+
+Turning to the joint plot, it tries to show both of these things at the same time. It's illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 03:00 and 06:00. In 2020, there was a pronounced peak of activity between 12:00 and 18:00, a smaller peak centered at 03:00 and much less activity throughout the rest of the day.
+
+We can also look at the peak in early 2021. This one shows a lot of activity from 09:00 to 16:00, with a small dip at around 12:00. Perhaps one of the people involved had to go for lunch.
+
+*** Summary statistics and the circular mean
+Creating and looking at the hexbin plot let us confirm the fact that just showing the average distribution hides a lot of structure. In particular, we can see that
+
+1. The counting rate varies a lot over time
+2. The time of day distribution also changes a lot
+
+Quantitatively, it's difficult to say more than that based on the figure. There's just too much going on, and it would be nice if we could simplifiy it.
+
+What we'd really need is some kind of summary statistic for a time of day distribution, because then we can easily plot how that summary statistic varies over time. An obvious first choice could be the mean of the distribution, to represent what time of day the average count takes place.
+
+Unfortunately, it's not so simple. The time of day data is circular, and the standard mean is badly suited for this use case. To illustrate, we can consider what the average time is of two events, one occurring at 23:59 and the other at 00:001. If we just use the linear mean, we arrive at 12:00, but intuitively the answer should be 00:00.
+
+What we can use instead is the [[https://en.wikipedia.org/wiki/Circular_mean][circular mean]]. You can imagine this as pretending we have a 24h analog clock, and each event is an arrow points to its correct time. The arrow tail is at (0, 0), and the arrow head is at position (x, y), corresponding to whatever time it is. What we want to do is to find the average angle of all the arrows, and to do that we average all the x positions separately, and all the y positions separately, and create a new arrow that points to (average x, average y). The angle we want is then the angle of this arrow.
+
+We can do that for the overall counting distribution to obtain
+
+#+begin_src jupyter-python
+  mean = scipy.stats.circmean(counts['time'], high=units.DAY)
+  hour, rem = divmod(mean, 3600)
+  minute, second = divmod(rem, 60)
+  print(f"The mean of the overall distribution is {int(hour):02d}:{int(minute):02d}")
+#+end_src
+
+That seems reasonable - it's inside the broad afternoon peak of activity, but slightly to the right, since there's more activity in the evening than in the early morning.
+
+With the summary statistic in hand, we can plot how the mean time of day of counts has varied over time
+
+#+begin_src jupyter-python
+  # counts.set_index('date', inplace=True)
+  counts['x'] = np.cos(counts['time'] / units.DAY * 2 * np.pi)
+  counts['y'] = np.sin(counts['time'] / units.DAY * 2 * np.pi)
+  rolling = counts[['x', 'y', 'numerical_date']].rolling('28d').mean()
+  rolling['time_of_day'] = (np.arctan2(rolling['y'], rolling['x']) * units.DAY / 2 / np.pi) % units.DAY
+  rolling = rolling.resample('7d').mean()
 #+end_src
 
 
 #+begin_src jupyter-python
-  af = scipy.fft.fft(signals[1]) / 1440 / np.pi
-  bf = scipy.fft.fft(signals[2])
-  c = scipy.fft.ifft(af * np.conj(bf))
-
-  print(np.linalg.norm(c - c.real))
-  plt.plot(c.real)
-  ax = plt.gca()
-  ax.set_xticks([0, 3 * 60, 6 * 60, 9 * 60, 12 * 60,
-                 15 * 60, 18 * 60, 21 * 60, 24 * 60])
-  ax.set_xticklabels(['0', '3', '6', '9', '12',
-                      '-9', '-6', '-3', '0'])
-  ax.set_xlabel('Time shift (hours)')
-  ax.set_ylabel('Overlap')
-  val = c.real.argmax()
-  print(min(val, 1440 - val))
-#+end_src
-
-Time for some more graphs & analysis. I feel like I haven't posted any of those for a while!
-
-[Some time ago](https://www.reddit.com/r/counting/comments/nhm573/comment/gzbannj/?context=3) I had a look at how our counting activity varied throughout the day for a slightly arbitrary slice of counts, and saw that it was clearly possible to see when people were asleep, and even when particularly prolific counters took their regular breaks. I haven't worked much with time series, so I thought it might be fun to explore more things to do with our daily routine. On that topic, I started wondering if it's possible to see the effect of daylight saving time in the counting data.
-
-I have the UTC timestamps for every count, so it's possible to compare our counting activity just before DST comes into force with our counting activity just afterwards, and see whether there's a difference. If counts always follow the same pattern in local time, and all counters observe DST at the same time, then that should show up as a rigid shift in the data. Now, DST occurs at different times (if at all) throughout the world, so I've focussed exclusively on DST in the US & Canada, where it starts on the second Sunday in March and ends on the first Sunday of November of each year^([*])^([+]).
-
-I've taken all the counts and looked at our activity in the week just before/after dst started/ended every year. To maximise the effect of DST, I've only picked the counts that occurred during the Monday-Friday, since I'd expect people's weekends to be less regular than the weekdays. [Here's](https://i.imgur.com/owaItiu.png) how that plot looks. You can see that the lines with DST generally leads the one without DST, and they have roughly the same shape, particularly in the interval between 12 noon and midnight. This seems to be the fingerprint of the DST change: a rigid shift of about one hour. Using a bit of fiddling I can calculate what the optimal shift is to make the two curves overlap, and get the result 67 minutes. So, case closed, right?
-
-Not so fast.
-
-It could be that there's a shift of one hour every week and DST has nothing to do with it! More seriously, there are other changes happening throughout the time period apart from DST; in the spring the days are getting longer, particularly the evenings, and in the autumn it's the opposite. That means that these effects should cancel out slightly in the data. Still, it would be nice to check properly: what I should do is to also look at the periods two weeks before and after the change as controls, since they should have most of the other variation, but **not** the dst. 
-
-If I do that, I get the following two plots of [dst with control](https://i.imgur.com/8lYJNvc.png) and [no dst with control](https://i.imgur.com/xSNUJKp.png). Hm. It's not like they're exactly on top of one another. Or that they're following the same general shape. Checking what shifts would best makes the plots coincide gives values 58 minutes and 92 minutes. Oh. Um.
-
-For the [With dst](https://i.imgur.com/8lYJNvc.png) graph it's apparent that the two curves are qualitatively different, and describing one as a shift of the other is misleading: The green curve has a big peak at midnight which is completely missing from the blue one, as well as a pronounced dip in the afternoon. I can [plot](https://i.imgur.com/7mntAI0.png) how well the curves match as a function of time shift, and it's clear that there's a broad region of ±1 hour where they sort of line up; picking an arbitrary peak in this plateau doesn't really make sense. Phew, that's half the discrepancy swept under the carpet. 
-
-Looking at the graphs without dst, I'm fairly stumped. They don't match up super well, but it does seem like a shift of about 90 minutes would make them match up significantly better. That's most pronounced between midnight and 4am, which is already odd - that's not when rcounting is most active. Looking at the counters involved in the those two peaks in the green and the blue curve, they're significantly different; only 3 counters are present in the top ten lists for both the blue and the green curve, and most of the 17 counters involved are based outside the US & Canada. "Aha", I hear you cry, "maybe the counters involved are experiencing their own version of dst, just at a different time to the US". Unfortunately, that can't be the explanation: summer time in Europe starts at least two weeks after summer time in the US, so it can't interfere there. It also ends sooner than in the US, so if there was an effect from that, it should show up in the "with dst" plot.
-
-I've tried doing a bunch more stuff to get the dst signal more clearly, like only taking counts from counters I know to be based in the US or Canada, but nothing has worked particularly well. This is all getting rather far away from my field, so I think I'll leave it here. I'm sure that cleverer people than me have come up with a way of getting more signal out of this noise, but it's not something I know about.
-
-# Conclusion
-
-If you want to find out whether or not the US currently has DST, then looking at the comments on r/counting is a potentially viable method for doing so. Just googling it would probably be a better approach, though.
-
-Hope you found this interesting!
-
-
-^([*]) Apart from Hawaii and Arizona, which are weird
-^([+]) That hasn't always been the DST rule, but it's been the case for as long as r/c has existed
-
-
-
-#+begin_src jupyter-python
-import pandas as pd
-import numpy as np
-
-def random_dates(start, end, n=10):
-
-    start_u = start.value//10**9
-    end_u = end.value//10**9
-
-    return pd.to_datetime(np.random.randint(start_u, end_u, n), unit='s')
-
-
-ids = ['ABC'[x] for x in np.random.randint(0, 3, 10)]
-start = pd.to_datetime('2022-01-01')
-end = pd.to_datetime('2022-01-05')
-df = pd.DataFrame(ids, index = sorted(random_dates(start, end)), columns=['id'])
+  sns.set_theme()
+  fig, ax = plt.subplots()
+  rolling["seconds_to_midnight"] = units.DAY - rolling["time_of_day"]
+  ax = sns.scatterplot(x="numerical_date", y="seconds_to_midnight", data=rolling)
+  prettify_timeseries(ax)
 
 #+end_src
 
+
+
+This analysis shows that from the start of r/counting until 2023, the average time of day of each count has drifted by about six hours. That's not something that was at all apparent from [[fig-hexbin]], which shows the value of the summary statistic for revealing trends in the data.
