@@ -33,7 +33,7 @@ The first thing we'll look at is how the average rate of counts varies throughou
 ```{python}
 #| label: fig-kde
 #| fig-cap: The average rate of counts at different times of day. The horizontal line shows the global average.
-offset = 6 * units.HOUR
+offset = 5 * units.HOUR
 fig, ax = plt.subplots(1)
 nbins = int(units.DAY / 30)
 counts['time'] = (counts['timestamp'] - offset) % units.DAY
@@ -49,7 +49,7 @@ def prettify(ax):
     ax.set_xticks(ticks)
     ax.set_xticklabels(labels)
     ax.set_ylim(bottom=0)
-    ax.set_xlabel("Time of day (UTC - 6)")
+    ax.set_xlabel("Time of day (UTC - 5)")
 ax.set_ylabel("Average rate [counts/minute]")
 prettify(ax)
 
@@ -129,15 +129,15 @@ def prettify_timeseries(ax):
     ax.set_yticklabels(labels)
     ax.set_ylim([0, units.DAY])
     ax.set_xlabel("Date")
-    ax.set_ylabel("Time of Day (UTC - 6)")
+    ax.set_ylabel("Time of Day (UTC - 5)")
 prettify_timeseries(ax)
 ```
 
 The plot is a bit difficult to follow, and that's kind of the point – it's trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; that's basically the same as what's plotted in @fig-kde, but stretched out a bit. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate was high, but gradually falling to a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with two important peaks.
 
-Turning to the joint plot, it tries to show both of these things at the same time. It's illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 03:00 and 06:00. In 2020, there was a pronounced peak of activity between 12:00 and 18:00, a smaller peak centered at 03:00 and much less activity throughout the rest of the day.
+Turning to the joint plot, it tries to show both of these things at the same time. It's illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 04:00 and 07:00. In 2020, there was a pronounced peak of activity between 13:00 and 19:00, a smaller peak centered at 04:00 and much less activity throughout the rest of the day.
 
-We can also look at the peak in early 2021. This one shows a lot of activity from 09:00 to 16:00, with a small dip at around 12:00. Perhaps one of the people involved had to go for lunch.
+We can also look at the peak in early 2021. This one shows a lot of activity from 10:00 to 17:00, with a small dip at around 13:00. Perhaps one of the people involved had to go for lunch.
 
 ## Summary statistics and the circular mean
 
