@@ -265,7 +265,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell" data-execution_count="2">
 <details open="">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>offset <span class="op">=</span> <span class="dv">6</span> <span class="op">*</span> units.HOUR</span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>offset <span class="op">=</span> <span class="dv">5</span> <span class="op">*</span> units.HOUR</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>nbins <span class="op">=</span> <span class="bu">int</span>(units.DAY <span class="op">/</span> <span class="dv">30</span>)</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">'time'</span>] <span class="op">=</span> (counts[<span class="st">'timestamp'</span>] <span class="op">-</span> offset) <span class="op">%</span> units.DAY</span>
@@ -281,7 +281,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    ax.set_xticks(ticks)</span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    ax.set_xticklabels(labels)</span>
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(bottom<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"Time of day (UTC - 6)"</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"Time of day (UTC - 5)"</span>)</span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Average rate [counts/minute]"</span>)</span>
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>prettify(ax)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
@@ -321,7 +321,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> head.to_frame(<span class="st">"variation"</span>).join(pd.DataFrame(top_counters).reset_index().set_index(<span class="dv">0</span>))</span>
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>Markdown(combined.to_markdown(headers<span class="op">=</span>[<span class="st">"**Counter**"</span>, <span class="st">"**Time of day variation**"</span>, <span class="st">"**HOC position**"</span>], floatfmt<span class="op">=</span><span class="st">".0f"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="4">
+<div class="cell-output cell-output-display" data-execution_count="22">
 <div id="tbl-variation" class="anchored">
 <table class="table table-sm table-striped">
 <caption>Table&nbsp;1: The most and least regular counters</caption>
@@ -416,7 +416,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    ax.set_yticklabels(labels)</span>
 <span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim([<span class="dv">0</span>, units.DAY])</span>
 <span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"Date"</span>)</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">"Time of Day (UTC - 6)"</span>)</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">"Time of Day (UTC - 5)"</span>)</span>
 <span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>prettify_timeseries(ax)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display">
@@ -429,8 +429,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 </div>
 <p>The plot is a bit difficult to follow, and that’s kind of the point - it’s trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; tht’s basically the same as what’s plotted in <em>fig-kde</em>, but stretched out a bit. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate was high, but gradually falling, reaching a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with two important peaks.</p>
-<p>Turning to the joint plot, it tries to show both of these things at the same time. It’s illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 03:00 and 06:00. In 2020, there was a pronounced peak of activity between 12:00 and 18:00, a smaller peak centered at 03:00 and much less activity throughout the rest of the day.</p>
-<p>We can also look at the peak in early 2021. This one shows a lot of activity from 09:00 to 16:00, with a small dip at around 12:00. Perhaps one of the people involved had to go for lunch.</p>
+<p>Turning to the joint plot, it tries to show both of these things at the same time. It’s illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 04:00 and 07:00. In 2020, there was a pronounced peak of activity between 13:00 and 18:00, a smaller peak centered at 04:00 and much less activity throughout the rest of the day.</p>
+<p>We can also look at the peak in early 2021. This one shows a lot of activity from 10:00 to 17:00, with a small dip at around 12:00. Perhaps one of the people involved had to go for lunch.</p>
 <section id="summary-statistics-and-the-circular-mean" class="level3">
 <h3 class="anchored" data-anchor-id="summary-statistics-and-the-circular-mean">Summary statistics and the circular mean</h3>
 <p>Creating and looking at the hexbin plot let us confirm the fact that just showing the average distribution hides a lot of structure. In particular, we can see that</p>
@@ -452,7 +452,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"The mean of the overall distribution is </span><span class="sc">{</span><span class="bu">int</span>(hour)<span class="sc">:02d}</span><span class="ss">:</span><span class="sc">{</span><span class="bu">int</span>(minute)<span class="sc">:02d}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>The mean of the overall distribution is 15:33</code></pre>
+<pre><code>The mean of the overall distribution is 16:33</code></pre>
 </div>
 </div>
 <p>That seems reasonable - it’s inside the broad afternoon peak of activity, but slightly to the right, since there’s more activity in the evening than in the early morning.</p>
@@ -483,8 +483,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>  Markdown(<span class="ss">f"The average time has shifted by </span><span class="sc">{</span>np<span class="sc">.</span>polyfit(rolling[<span class="st">'numerical_date'</span>], rolling[<span class="st">'time_of_day'</span>], <span class="dv">1</span>)[<span class="dv">0</span>]<span class="sc">:.1f}</span><span class="ss"> seconds per day."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="9">
-<p>The average time has shifted by -6.6 seconds per day.</p>
+<div class="cell-output cell-output-display" data-execution_count="27">
+<p>The average time has shifted by -6.3 seconds per day.</p>
 </div>
 </div>
 <p>This shift is not something that was at all apparent from <a href="#fig-hexbin">Figure&nbsp;2</a>, which shows the value of the summary statistic for revealing trends in the data.</p>
@@ -831,7 +831,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
 <span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-kde</span></span>
 <span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: The average rate of counts at different times of day. The horizontal line shows the global average.</span></span>
-<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>offset <span class="op">=</span> <span class="dv">6</span> <span class="op">*</span> units.HOUR</span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>offset <span class="op">=</span> <span class="dv">5</span> <span class="op">*</span> units.HOUR</span>
 <span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>)</span>
 <span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>nbins <span class="op">=</span> <span class="bu">int</span>(units.DAY <span class="op">/</span> <span class="dv">30</span>)</span>
 <span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">'time'</span>] <span class="op">=</span> (counts[<span class="st">'timestamp'</span>] <span class="op">-</span> offset) <span class="op">%</span> units.DAY</span>
@@ -847,7 +847,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a>    ax.set_xticks(ticks)</span>
 <span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a>    ax.set_xticklabels(labels)</span>
 <span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(bottom<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"Time of day (UTC - 6)"</span>)</span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"Time of day (UTC - 5)"</span>)</span>
 <span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Average rate [counts/minute]"</span>)</span>
 <span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a>prettify(ax)</span>
 <span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a></span>
@@ -927,15 +927,15 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb12-141"><a href="#cb12-141" aria-hidden="true" tabindex="-1"></a>    ax.set_yticklabels(labels)</span>
 <span id="cb12-142"><a href="#cb12-142" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim([<span class="dv">0</span>, units.DAY])</span>
 <span id="cb12-143"><a href="#cb12-143" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"Date"</span>)</span>
-<span id="cb12-144"><a href="#cb12-144" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">"Time of Day (UTC - 6)"</span>)</span>
+<span id="cb12-144"><a href="#cb12-144" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">"Time of Day (UTC - 5)"</span>)</span>
 <span id="cb12-145"><a href="#cb12-145" aria-hidden="true" tabindex="-1"></a>prettify_timeseries(ax)</span>
 <span id="cb12-146"><a href="#cb12-146" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb12-147"><a href="#cb12-147" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-148"><a href="#cb12-148" aria-hidden="true" tabindex="-1"></a>The plot is a bit difficult to follow, and that's kind of the point - it's trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; tht's basically the same as what's plotted in *fig-kde*, but stretched out a bit. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate was high, but gradually falling, reaching a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with two important peaks.</span>
 <span id="cb12-149"><a href="#cb12-149" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-150"><a href="#cb12-150" aria-hidden="true" tabindex="-1"></a>Turning to the joint plot, it tries to show both of these things at the same time. It's illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 03:00 and 06:00. In 2020, there was a pronounced peak of activity between 12:00 and 18:00, a smaller peak centered at 03:00 and much less activity throughout the rest of the day.</span>
+<span id="cb12-150"><a href="#cb12-150" aria-hidden="true" tabindex="-1"></a>Turning to the joint plot, it tries to show both of these things at the same time. It's illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 04:00 and 07:00. In 2020, there was a pronounced peak of activity between 13:00 and 18:00, a smaller peak centered at 04:00 and much less activity throughout the rest of the day.</span>
 <span id="cb12-151"><a href="#cb12-151" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-152"><a href="#cb12-152" aria-hidden="true" tabindex="-1"></a>We can also look at the peak in early 2021. This one shows a lot of activity from 09:00 to 16:00, with a small dip at around 12:00. Perhaps one of the people involved had to go for lunch.</span>
+<span id="cb12-152"><a href="#cb12-152" aria-hidden="true" tabindex="-1"></a>We can also look at the peak in early 2021. This one shows a lot of activity from 10:00 to 17:00, with a small dip at around 12:00. Perhaps one of the people involved had to go for lunch.</span>
 <span id="cb12-153"><a href="#cb12-153" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-154"><a href="#cb12-154" aria-hidden="true" tabindex="-1"></a><span class="fu">### Summary statistics and the circular mean</span></span>
 <span id="cb12-155"><a href="#cb12-155" aria-hidden="true" tabindex="-1"></a></span>
