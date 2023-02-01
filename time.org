@@ -59,7 +59,7 @@ You can see that the counting rate varies quite a bit - the most popular time (e
 If the rate of counting were perfectly uniform, the chart would be perfectly flat. If every count was always made at precisely 12:00 there would be an infinitely tall spike right at the middle of the graph, and the rate would be zero at all other times. It would be nice to be able to quantify just how far away the distribution is from uniform. Some statisticians have come up with the [[https://en.wikipedia.org/wiki/Coefficient_of_variation][Coefficient of Variation]] to do precisely that[fn:: I spent 5 minutes playing with $L^2$ norms before I realised I was reinventing the wheel]; it says that the variation of a sample of values can be expressed as the ratio of the standard deviation to the mean. If we do this for our time of day data, we obtain
 
 #+begin_src jupyter-python
-print(f"{np.sqrt(kde.var()) / kde.mean() * 100:.1f}%")
+print(f"{np.sqrt(kde.var()) / kde.mean() * 100:.1f}%.")
 #+end_src
 
 It's of course also possible to calculate this variation for individual counters, and not just for all counters together. The counters in the top 30 with most and least variation are shown on @tbl-variation.
@@ -80,7 +80,7 @@ It's of course also possible to calculate this variation for individual counters
   Markdown(combined.to_markdown(headers=["**Counter**", "**Time of day variation**", "**HOC position**"], floatfmt=".0f"))
 #+end_src
 
-As an aside, you should notice that even the most regular counter has a variation that is higher than the overall variation. Intuitively that makes sense - it's harder for one person to evenly cover all 24 hours of the day than it is for all counters together. We can focus on the single least and most regular counters and look at how their counting rates vary throughout the day. Here's a plot of that:
+As an aside, you should notice that even the most regular counter has a variation that is higher than the overall variation. Intuitively that makes sense - it's harder for one person to evenly cover all 24 hours of the day than it is for all counters together. We can focus on the single least and most regular counters and look at how their counting rates have varied throughout the day. Here's a plot of that:
 
 #+begin_src jupyter-python
   fig, ax = plt.subplots()
@@ -97,7 +97,7 @@ It's not too surprising, but those distributions look very different!
 
 * The evolution of the counting distribution
 
-The previous section provided one view into the activity on r/counting and how it's qualitatively different for different people, and at different times of day. One potential issue with that analysis is that it's a static view of the data, and thus ignores any changes there have been over time. Different people have been active at different periods of time in r/counting history, and they've probably tended to count at different times of day. But the foregoing completely ignores that.
+The previous section provided one view into the activity on r/counting and how it's qualitatively different for different people, and at different times of day. One potential issue with that analysis is that it's a static view of the data, and thus ignores any changes there might have been over time. Different people have been active at different periods of time in r/counting history, and they've probably tended to count at different times of day. But the foregoing completely ignores that.
 
 To see if (and how) the distributions of counts have changed over time it would in principle be possible to make a plot like @fig-kde for each year or month of activity on r/counting, and then compare them. Alternatively, we could add a third axis to the plot and make a single three-dimensional plot, which might show what we want. I always find those really difficult to read, so that doesn't seem too appealing. On the other hand, if it were possible to show a single distribution in just one dimension instead of two, then we could put lots of those next to each other and build up a two-dimensional plot.
 
@@ -190,4 +190,4 @@ This analysis shows that from the start of r/counting until 2023, the average ti
   Markdown(f"the average time has shifted by {np.polyfit(rolling['numerical_date'], rolling['time_of_day'], 1)[0]:.1f} seconds per day.")
 #+end_src
 
-That's not something that was at all apparent from @fig-hexbin, which shows the value of the summary statistic for revealing trends in the data.
+This shift is not something that was at all apparent from @fig-hexbin, which shows the value of the summary statistic for revealing trends in the data.
