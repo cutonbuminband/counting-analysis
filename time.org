@@ -80,7 +80,7 @@ It's of course also possible to calculate this variation for individual counters
   Markdown(combined.to_markdown(headers=["**Counter**", "**Time of day variation**", "**HOC position**"], floatfmt=".0f"))
 #+end_src
 
-As an aside, you should notice that even the most regular counter has a variation that is higher than the overall variation. Intuitively that makes sense - it's harder for one person to evenely cover all 24 hours of the day than it is for all counters together. We can focus on the single least and most regular counters and look at how their counting rates vary throughout the day. Here's a plot of that:
+As an aside, you should notice that even the most regular counter has a variation that is higher than the overall variation. Intuitively that makes sense - it's harder for one person to evenly cover all 24 hours of the day than it is for all counters together. We can focus on the single least and most regular counters and look at how their counting rates vary throughout the day. Here's a plot of that:
 
 #+begin_src jupyter-python
   fig, ax = plt.subplots()
@@ -132,7 +132,7 @@ What I'll do is split the timestamp of each count into a day component and a *ti
   prettify_timeseries(ax)
 #+end_src
 
-The plot is a bit difficult to follow, and that's kind of the point -- it's trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; that's basically the same as what's plotted in @fig-kde, but stretched out a bit. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate wa high, but gradually falling to a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with two important peaks.
+The plot is a bit difficult to follow, and that's kind of the point -- it's trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; that's basically the same as what's plotted in @fig-kde, but stretched out a bit. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate was high, but gradually falling to a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with two important peaks.
 
 Turning to the joint plot, it tries to show both of these things at the same time. It's illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 03:00 and 06:00. In 2020, there was a pronounced peak of activity between 12:00 and 18:00, a smaller peak centered at 03:00 and much less activity throughout the rest of the day.
 
@@ -144,7 +144,7 @@ Creating and looking at the hexbin plot let us confirm the fact that just showin
 1. The counting rate varies a lot over time
 2. The time of day distribution also changes a lot
 
-Quantitatively, it's difficult to say more than that based on the figure. There's just too much going on, and it would be nice if we could simplifiy it.
+Quantitatively, it's difficult to say more than that based on the figure. There's just too much going on, and it would be nice if we could simplify it.
 
 What we'd really need is some kind of summary statistic for a time of day distribution, because then we can easily plot how that summary statistic varies over time. An obvious first choice could be the mean of the distribution, to represent what time of day the average count takes place.
 
@@ -187,7 +187,7 @@ With the summary statistic in hand, we can plot how the mean time of day of coun
 This analysis shows that from the start of r/counting until 2023, the average time of day of each count has drifted by about six hours. More precisely, we can say that
 
 #+begin_src jupyter-python
-  Markdown(f"The average time has shifted by {np.polyfit(rolling['numerical_date'], rolling['time_of_day'], 1)[0]:.1f} seconds per day.")
+  Markdown(f"the average time has shifted by {np.polyfit(rolling['numerical_date'], rolling['time_of_day'], 1)[0]:.1f} seconds per day.")
 #+end_src
 
 That's not something that was at all apparent from @fig-hexbin, which shows the value of the summary statistic for revealing trends in the data.
