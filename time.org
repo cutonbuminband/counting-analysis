@@ -12,6 +12,7 @@ We'll start off with some code to import the relevant packages and load the data
   import pandas as pd
   import sqlite3
   import matplotlib.pyplot as plt
+  import matplotlib.dates as mdates
   import numpy as np
   import scipy
   from rcounting import counters, analysis, graph_tools, units
@@ -191,3 +192,19 @@ This analysis shows that from the start of r/counting until 2023, the average ti
 #+end_src
 
 This shift is not something that was at all apparent from @fig-hexbin, which shows the value of the summary statistic for revealing trends in the data.
+
+#+begin_src jupyter-python
+   import matplotlib.dates as mdates
+   interval = 10 * units.MINUTE
+  x = np.arange((counts["timestamp"].min() // interval + 1) * interval , counts["timestamp"].max(), interval)
+
+  hist, edges = np.histogram(counts["timestamp"], bins=x)
+  hist = hist - hist.mean()
+  f = abs(np.fft.rfft(hist))
+  omega = np.fft.rfftfreq(len(hist), interval / units.DAY)
+  plt.plot(omega, f)
+  plt.xlim(left=-0.05, right=5)
+  # plt.ylim(0, 1e6)
+  plt.xlabel("Cycles per day")
+  plt.ylabel("Intensity")
+#+end_src
