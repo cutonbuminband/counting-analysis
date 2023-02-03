@@ -200,7 +200,7 @@ This shift is not something that was at all apparent from @fig-hexbin, which sho
 
   hist, edges = np.histogram(counts["timestamp"], bins=x)
   hist = hist - hist.mean()
-  f = abs(np.fft.rfft(hist))
+  f = abs(np.fft.rfft(hist)) / np.sqrt(len(hist))
   omega = np.fft.rfftfreq(len(hist), interval / units.DAY)
   plt.plot(omega, f)
   plt.xlim(left=-0.05, right=5)
