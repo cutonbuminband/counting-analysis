@@ -1,6 +1,14 @@
 #+PROPERTY: header-args:jupyter-python  :session distribution :kernel reddit
 #+PROPERTY: header-args    :pandoc t :tangle yes
 
+* Notes
+- What's the distribution of how many people have counted each number?
+- Who counts most on the odds and most on the evens, and most balanced
+- Top 30: who has the fewest counts/get
+- Who counts most in the first half of a thread and who counts most in the second?
+- How many counters have counted all numbers?
+- Who is only missing a few numbers?
+- Score people as early/middle/late counters?
 
 * Introduction
 -
@@ -28,68 +36,26 @@ counts = pd.read_sql("select username from comments where position > 0 order by 
 counts["username"] = counts["username"].apply(counters.apply_alias)
 #+end_src
 
-#+RESULTS:
-
 * Most common counts
 #+begin_src jupyter-python
   counts = pd.read_sql("select username, position % 1000 as position from comments where username != '[deleted]' and position > 0 order by timestamp", db)
   counts["username"] = counts["username"].apply(apply_alias)
 #+end_src
 
-#+RESULTS:
-
 #+begin_src jupyter-python
   aggregated = counts.groupby("position")["username"].nunique()
   print(aggregated.sort_values(ascending=False).head(10).to_markdown(headers=["**Count**", "**No. of different counters**"]))
   ax = aggregated.iloc[0:1000].plot(ylabel="Number of different counters", xlabel="Thread position")
   ax.set_xlim(-5, 1000)
-  plt.savefig("plots/position_v_ncounters.png", bbox_inches='tight')
 #+end_src
-
-#+RESULTS:
-:RESULTS:
-#+begin_example
-  |   **Count** |   **No. of different counters** |
-  |------------:|--------------------------------:|
-  |          41 |                             684 |
-  |          51 |                             679 |
-  |          43 |                             678 |
-  |          49 |                             677 |
-  |          75 |                             676 |
-  |          37 |                             674 |
-  |          45 |                             671 |
-  |          73 |                             670 |
-  |          71 |                             668 |
-  |          82 |                             664 |
-#+end_example
-[[file:./.ob-jupyter/ccab89355420994fa320ec421fc7c7b03c652168.png]]
-:END:
 #+begin_src jupyter-python
   summary = counts.groupby("username")["position"].agg(mode=pd.Series.mode,
                                                        frequency=lambda x: x.value_counts().iloc[0])
 #+end_src
 
-#+RESULTS:
-
 #+begin_src jupyter-python
   print(summary.sort_values("frequency", ascending=False).head(10).to_markdown(headers=["**username**", "**Most common number**", "**frequency**"]))
 #+end_src
-
-#+RESULTS:
-#+begin_example
-  | **username**     |   **Most common number** |   **frequency** |
-  |:-----------------|-------------------------:|----------------:|
-  | davidjl123       |                        1 |             704 |
-  | thephilsblogbar2 |                        3 |             637 |
-  | Countletics      |                      820 |             454 |
-  | Antichess        |                        2 |             330 |
-  | GarlicoinAccount |                      462 |             263 |
-  | Smartstocks      |                      487 |             263 |
-  | TheNitromeFan    |                       23 |             243 |
-  | nonsensy         |                      700 |             193 |
-  | atomicimploder   |                       16 |             170 |
-  | TehVulpez        |                        9 |             136 |
-#+end_example
 
 #+begin_src jupyter-python
   print(summary.loc["ClockButTakeOutTheL"])
@@ -100,14 +66,6 @@ counts["username"] = counts["username"].apply(counters.apply_alias)
   ax.set_ylabel("Number of counts")
   plt.savefig("plots/clock_counts.png", bbox_inches='tight')
 #+end_src
-
-#+RESULTS:
-:RESULTS:
-: mode         564
-: frequency     76
-: Name: ClockButTakeOutTheL, dtype: object
-[[file:./.ob-jupyter/7846837837c0b3328b2a8b535151fdb7ce205f25.png]]
-:END:
 
 * Odds and evens
 #+begin_src jupyter-python
@@ -369,4 +327,8 @@ df["cumcount"] = df.groupby('username').cumcount()
 
 #+begin_src jupyter-python
 print(first_get.sort_values(by='cumcount', ascending=False).head()['cumcount'].to_markdown(headers=['**username**', '**counts**']))
+#+end_src
+
+#+begin_src jupyter-python
+  counts.groupby("position")["username"].nunique()
 #+end_src
