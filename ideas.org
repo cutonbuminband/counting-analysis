@@ -1,3 +1,7 @@
+* Ideas for future posts
+
+A loosely-organised list of things which would be interesting to look at in the future
+
 - For one, you could try to divide counters into runners or those who count in bursts and counters who are more or less active evenly. This could be done by taking the time (i think it makes more sense than raw count difference) between their successive comments. Then you could count a mean (not arithmetic tho, perhaps something like weighted idk) and calculate the standard deviation as well
 
 - For another, you could try taking a look which counters have filled the gaps in time when there was no one active, meaning they placed a number that it took a lot of time to reply to (meaning next comment appeared an hour later or so) as opposed to people who count at popular times and time gaps aren't that large. So, like a gap filler leaderboard based on some sort of mean
