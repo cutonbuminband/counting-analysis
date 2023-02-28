@@ -7,3 +7,5 @@ A loosely-organised list of things which would be interesting to look at in the 
 - For another, you could try taking a look which counters have filled the gaps in time when there was no one active, meaning they placed a number that it took a lot of time to reply to (meaning next comment appeared an hour later or so) as opposed to people who count at popular times and time gaps aren't that large. So, like a gap filler leaderboard based on some sort of mean
 
 - One more. It would be interesting to see who's most and least talkative from, let's say, top50 hoc, based on the number of characters in their main thread counts. You could also try to check if we chat more or less over the years
+
+- I saw in the “r/counting network” section the part with the pink and blue communities. What would happen if there were more communities? it would be interesting to see many different smaller communities and how they connect with each other
