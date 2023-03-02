@@ -1,5 +1,6 @@
 #+PROPERTY: header-args:jupyter-python  :session distribution :kernel reddit
 #+PROPERTY: header-args    :pandoc t :tangle yes
+#+TITLE: The Distribution of Counts or: How I Learned to Stop Worrying and Love Pandas Indexing
 * Introduction
 
 This round of analysis is a deep dive into the distribution of counts and counters, across the thousands of threads that have been posted on r/counting over the years. I'll be trying to answer questions like "Which number from 1-1000" has been counted by the most people, and "Which people have a significant preference for counting odd or even numbers".
@@ -76,7 +77,7 @@ Similarly, we can take a look at which counters are only missing a few values be
                          .query("username in @missing")
                          .groupby("username")["position"]
                          .apply(lambda x: (set(range(1, 1001)) - set(x.unique()))))
-  headers = ["**Counter**", "**Total Counts**", "**Missing Values**"]
+  headers = ["**Username**", "**Total Counts**", "**Missing Values**"]
   Markdown(df.head(10).to_markdown(headers=headers))
 #+end_src
 
@@ -92,12 +93,12 @@ On average, everyone should have made 1000 counts for each get they have, but so
   gets.name = "n_gets"
   totals = pd.concat([counts['username'].value_counts().loc[gets.index], gets], axis=1)
   totals.columns = ["counts", "gets"]
-  headers = ["**username**", "**counts**", "**gets**"]
+  headers = ["**Username**", "**Counts**", "**Gets**"]
   Markdown(totals.sort_values(by='counts').head().to_markdown(headers=headers))
 #+end_src
 
 
-Looking at this list, thephilsnipebar and Ralph_Schaosid are immediately obvious as counting alts. MeNowDealWithIt has made significantly more than one count, but deleted their account before they were picked up by the script, so I have no idea how many. u/Hotshot2k4 seems legit. They made three counts, the first of which was the 54k get. More recently, u/ItzTaken got a [free get](/comments/mlqtr1/_/gtobrvf?context=3) that VitaminB16 left in the 4195k thread. Before that they had made two counts in the 2M era.
+Looking at this list, =thephilsnipebar= and =Ralph_Schaosid= are immediately obvious as counting alts. =MeNowDealWithIt= has made significantly more than one count, but deleted their account before they were picked up by the script, so I have no idea how many. =Hotshot2k4= seems legit. They made three counts, the first of which was the 54k get. More recently, =ItzTaken= got a [[http://reddit.com/r/counting/comments/mlqtr1/_/gtobrvf?context=3][free get]] that =VitaminB16= left in the 4195k thread. Before that they had made two counts in the 2M era.
 
 #+begin_src jupyter-python
   lt_100 = (totals["counts"] < 100).sum()
@@ -109,7 +110,7 @@ Looking at this list, thephilsnipebar and Ralph_Schaosid are immediately obvious
   Markdown(s)
 #+end_src
 
-Maybe it's better instead to look only at counters who have made at least 1000 counts. The relevant comparison would then be the ratio of counts to gets. That's shown on @tbl-ratio, and veterans of r/countign will recognise some of the first five names as counters who like to try and snipe the get.
+Maybe it's better instead to look only at counters who have made at least 1000 counts. The relevant comparison would then be the ratio of counts to gets. That's shown on @tbl-ratio, and veterans of r/counting will recognise some of the first five names as counters who like to try and snipe the get.
 
 #+begin_src jupyter-python
   #| label: tbl-ratio
@@ -128,7 +129,7 @@ I promised to write about a distribution of counts, and so far I've mainly writt
   #| fig-cap: The amount of people who have counted each number. You can see a very sharp rise from the start of each thread to ~50, followed by a steady decline towards the get. The most popular number has been counted by more than twice as many people as the least popular.
   aggregated = counts.groupby("position")["username"].nunique()
   ax = aggregated.iloc[0:1000].plot(ylabel="Number of different counters", xlabel="Thread position")
-  ax.set_xlim(-5, 1000)
+  _ = ax.set_xlim(-5, 1000)
 #+end_src
 
 We can also look at the counting distributions for individual counters. Again, the default assumption would be that everybody has counted each number roughly the same number of times. Not too surprisingly, we see that this assumption holds better for some counters than it does for others. @fig-regularity shows the counting distributions for the most and least regular counter, and you can really see the difference between the two.
@@ -140,16 +141,13 @@ The graph has been split into odds and evens, because there's generally a consis
   grouped = complete[['username', 'position']].value_counts()
   cov = grouped.groupby(level=0).agg(lambda x: np.std(x) / np.mean(x)).sort_values()
   users = [cov.index[0], cov.index[-1]]
-  print(users)
   data = grouped.loc[users].sort_index().to_frame().reset_index()
   data.columns = ['Counter', 'Thread Position', 'count']
   data.loc[data["Counter"] == users[0], 'count'] /= data.loc[data["Counter"] == users[0], 'count'].mean()
   data.loc[data["Counter"] == users[1], 'count'] /= data.loc[data["Counter"] == users[1], 'count'].mean()
   data["Parity"] = [["even", "odd"][val] for val in data.index % 2]
   ax = sns.lineplot(data=data, y='count', x="Thread Position", hue="Parity", style="Counter")
-  ax.set_ylabel("Relative frequency")
-  # ax.set_title(users)
-
+  _ = ax.set_ylabel("Relative frequency")
 #+end_src
 
 We can quantify the difference for each counter through the [[https://en.wikipedia.org/wiki/Coefficient_of_variation][Coefficient of Variation]], which expresses how far their counting distribution is from uniform. Here's a table of the five most and five least regular counters:
@@ -162,6 +160,7 @@ We can quantify the difference for each counter through the [[https://en.wikiped
 Of course, we saw from @fig-distribution that there's a significant variation in how many people have counted each number, so perhaps the uniform distribution is a bad model for how often we should expect each counter to have counted a particular number. Indeed, since twice as many people have counted the number 50 as have counted 1000, then **on average** people who have counted 1000 have done so twice as often as people who have counted 50. That leads to a model distribution that goes as $f(n) \propto \frac{1}{\textrm{number of people who have counted n}}$. We can again look through all the counters and see who has a counting distribution closest to this ideal:
 
 #+begin_src jupyter-python
+  #| label: fig-model
   #| fig-cap: The distribution of counts for the counter who most closely matches the model distribution.
   distribution = 1 / aggregated.iloc[0:1000]
   distribution = distribution / distribution.mean()
@@ -182,7 +181,7 @@ Of course, we saw from @fig-distribution that there's a significant variation in
   ax = sns.lineplot(data=data, y='count', x="Thread Position", hue="Parity", lw=2, linestyle="--")
   ax.plot(distribution, zorder=-1, color="0.7")
   ax.set_ylabel("Relative Frequency")
-  ax.set_title(username)
+  _ = ax.set_title(username)
 #+end_src
 
 It's impressive just how closely david's counting frequency matches the toy model I suggested above!
@@ -194,7 +193,7 @@ It is striking though just how large the difference can be for some counters, so
 
 #+begin_src jupyter-python
   #| label: tbl-parity
-  #| tbl-cap: Three sets of counters, organised by parity: Those with most odd counts, those with most even counts, and those who are closest to being perfectly balanced.
+  #| tbl-cap: "Three sets of counters, organised by parity: Those with most odd counts, those with most even counts, and those who are closest to being perfectly balanced."
   counts["is_even"] = (counts["position"] % 2 == 0)
   offsets = ["1gm10t", "7hn2tm", "b471wg", "bz6r0g", "d6pgni", "ebnh39", "grggc0", "oj50hj", "ob4a2h", "t81gug"]
   for offset in offsets:
@@ -206,7 +205,7 @@ It is striking though just how large the difference can be for some counters, so
   table['difference'] = table['n_even'] - table['n_odd']
   table['relative_difference'] = (table['n_even'] - table['n_odd']) / (table['n_even'] + table['n_odd']) * 100
   table['absolute_difference'] = abs(table['relative_difference'])
-  headers=["**Username**", "**n_(even)**", "**n_(odd)**", "**Difference**", "**Relative Difference (%)**"]
+  headers=["**Username**", "**n_(even)**", "**n_(odd)**", "**Difference**", "**Relative Difference [%]**"]
   columns = ['n_even', 'n_odd', 'difference', 'relative_difference']
   Markdown(pd.concat([table.sort_values(by='difference').head(),
                       table.sort_values(by='difference', ascending=False).head(),
