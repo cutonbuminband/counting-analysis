@@ -6,14 +6,13 @@
 - Who counts most on the odds and most on the evens, and most balanced
 - Top 30: who has the fewest counts/get
 - Who counts most in the first half of a thread and who counts most in the second?
-- How many counters have counted all numbers?
-- Who is only missing a few numbers?
 - Score people as early/middle/late counters?
 
 * Introduction
--
 
-We'll start off with some code to import the relevant packages and load the data
+This round of analysis is a deep dive into the distribution of counts and counters, across the thousands of threads that have been posted on r/counting over the years. I'll be trying to answer questions like "Which number from 1-1000" has been counted by the most people, and "Which people have a significant preference for counting odd or even numbers".
+
+We'll start off with some code to import the relevant packages and load the data.
 
 #+begin_src jupyter-python
 #| code-fold: true
@@ -27,13 +26,66 @@ from rcounting import counters, analysis, graph_tools
 import seaborn as sns
 sns.set_theme()
 from IPython.display import Markdown
-data_directory = Path("../data")
-import networkx as nx
+data_directory = Path("../../data")
 import itertools
 
 db = sqlite3.connect(data_directory / "counting.sqlite")
-counts = pd.read_sql("select username from comments where position > 0 order by timestamp", db)
+counts = pd.read_sql("select username, position from comments where position > 0 order by timestamp", db)
 counts["username"] = counts["username"].apply(counters.apply_alias)
+#+end_src
+
+* 100% Completion
+
+A natural place to start is to look at how many counters have counted every number from 1 to 1000. For this (and most of the other stats in this page) I'll be restricting my attention to people who have made at least 1000 counts.
+
+#+begin_src jupyter-python
+  totals = counts.groupby("username").size()
+  usernames = [x for x in totals[totals >= 1000].index if not counters.is_banned_counter(x)]
+  subset = counts.query("username in @usernames").copy()
+  subset["position"] = (subset["position"] - 1) % 1000 + 1
+
+  missing_values = 1000 - subset.groupby("username")["position"].nunique()
+  incomplete = missing_values[missing_values > 0]
+  sum(missing_values == 0)
+#+end_src
+
+We can drill a little deeper and ask how quickly each counter reached the full set. In theory it's possible to do that after only 1000 counts, but in practice it's extremely unlikely. Indeed, @tbl-complete shows that even the fastest counters needed multiple times that.
+
+#+begin_src jupyter-python
+  #| label: tbl-complete
+  #| tbl-cap: The fastest and slowest counters to count every number from 1 to 1000, according to how many counts they had when they reached the full sets
+
+  completists = [username for username in usernames if missing_values[username] == 0]
+  complete = subset.query("username in @completists").copy()
+  complete["index"] = complete.index
+  last_counts = complete.groupby("username").apply(lambda x: (x.groupby("position").head(1)).tail(1)["index"])
+  totals = counts.groupby("username").cumcount()
+  df = (last_counts
+        .reset_index(level=1)["index"]
+        .apply(lambda x: totals.loc[x])
+        .sort_values())
+  headers = ["**Username**", "**Number of Counts**"]
+  Markdown(pd.concat([df.tail().sort_values(ascending=False), df.head()]).to_markdown(headers=headers))
+#+end_src
+
+
+Similarly, we can take a look at which counters are only missing a few values before they have the full set:
+
+#+begin_src jupyter-python
+  #| tbl-cap: The 10 counters with the most counts who are still missing up to five values in order to have counted the full set of numbers from 1 to 1000
+  missing = [username for username in usernames if 0 < missing_values[username] <= 5]
+  df = (subset
+        .query("username in @missing")
+        .groupby("username")
+        .size()
+        .sort_values(ascending=False)
+        .to_frame(name="n_counts"))
+  df["missing_value"] = (subset
+                         .query("username in @missing")
+                         .groupby("username")["position"]
+                         .apply(lambda x: (set(range(1, 1001)) - set(x.unique()))))
+  headers = ["**Counter**", "**Total Counts**", "**Missing Values**"]
+  Markdown(df.head(10).to_markdown(headers=headers))
 #+end_src
 
 * Most common counts
@@ -107,74 +159,6 @@ counts["username"] = counts["username"].apply(counters.apply_alias)
 #+end_src
 
 * Count distribution
-We'll start by loading the counts. We only need the thread position and the username
-#+begin_src jupyter-python
-  counts = pd.read_sql("select username, position from comments "
-                       "where position > 0 "
-                       "order by timestamp", db)
-#+end_src
-
-#+begin_src jupyter-python
-  counts['username'] = counts['username'].apply(apply_alias)
-  counts["position"] = (counts["position"] - 1) % 1000 + 1
-#+end_src
-
-Since we want to look at people's distribution of counts, we should focus on counters with a significant number of counts
-#+begin_src jupyter-python
-  totals = counts.groupby('username').size().sort_values(ascending=False)
-  usernames = [x for x in totals[totals >= 1000].index if not is_banned_counter(x)]
-  subset = counts.query("username in @usernames")
-#+end_src
-
-
-#+begin_src jupyter-python
-  def count_missing(group):
-    return len(set(range(1, 1001)) - set(group["position"]))
-
-  missing_values = subset.groupby("username").apply(count_missing)
-  print(sum(missing_values == 0))
-  incomplete = missing_values[missing_values > 0]
-#+end_src
-
-#+begin_src jupyter-python
-  combined = pd.concat([subset.groupby("username").size(), missing_values], axis=1)
-  combined.columns = ["counts", "n_missing"]
-  print(combined.query("n_missing > 0").sort_values("counts", ascending=False))
-  target = combined.query("n_missing == 1").copy()
-#+end_src
-
-
-#+begin_src jupyter-python
-target["missing_value"] = pd.Series(target.index.map(lambda x: (set(range(1, 1001)) - set(subset.query("username == @x")["position"])).pop()), index=target.index)
-print(target.drop('n_missing', axis=1).sort_values('counts', ascending=False).to_markdown(headers=["**Counter**", "Total Counts", "**Missing Value**"]))
-
-#+end_src
-
-#+begin_src jupyter-python
-username = "Krazeli"
-comments = pd.read_sql(f"select * from comments where username == '{username}'", db)
-comments[comments['body'].apply(parsing.find_count_in_text, raise_exceptions=False) % 1000 == 280]
-#+end_src
-
-#+begin_src jupyter-python
-print(combined.query("n_missing == 0").sort_values('counts'))
-#+end_src
-
-#+begin_src jupyter-python
-new_target = combined.query("0 < n_missing <= 5").copy()
-new_target['missing_values'] = pd.Series(new_target.index.map(lambda x: (set(range(1, 1001)) - set(subset.query("username == @x")["position"]))), index=new_target.index)
-print(new_target.sort_values(['n_missing', 'counts']).to_markdown(headers=["**Counter**", "**Total counts**", "**No. of missing values**", "**Missing values**"]))
-#+end_src
-
-#+begin_src jupyter-python
-  username = "Nekyiia"
-  comments = pd.read_sql(f"select comments.* from comments join counters on comments.username == counters.username where counters.canonical_username == '{username}'", db)
-#+end_src
-
-#+begin_src jupyter-python
-comments['imputed_count'] = comments['body'].apply(parsing.find_count_in_text, raise_exceptions=False)
-comments.query('imputed_count % 1000 == 5')
-#+end_src
 
 ** Distribution of final digits
 #+begin_src jupyter-python
