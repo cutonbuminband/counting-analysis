@@ -1,0 +1,220 @@
+---
+title: "The Distribution of Counts or: How I Learned to Stop Worrying and Love Pandas Indexing"
+---
+
+# Introduction
+
+This round of analysis is a deep dive into the distribution of counts and counters, across the thousands of threads that have been posted on r/counting over the years. I'll be trying to answer questions like "Which number from 1-1000" has been counted by the most people, and "Which people have a significant preference for counting odd or even numbers".
+
+We'll start off with some code to import the relevant packages and load the data.
+
+```{python}
+#| code-fold: true
+#| code-summary: "Code for importing packages and loading data"
+from pathlib import Path
+import pandas as pd
+import sqlite3
+import matplotlib.pyplot as plt
+import numpy as np
+from rcounting import counters, analysis, graph_tools
+import seaborn as sns
+sns.set_theme()
+from IPython.display import Markdown
+data_directory = Path("../data")
+import itertools
+
+db = sqlite3.connect(data_directory / "counting.sqlite")
+counts = pd.read_sql("select username, submission_id, position from comments where position > 0 order by timestamp", db)
+counts["username"] = counts["username"].apply(counters.apply_alias)
+counts["position"] = (counts["position"] - 1) % 1000 + 1
+
+```
+
+# 100% Completion
+
+A natural place to start is to look at how many counters have counted every number from 1 to 1000. For this (and most of the other stats in this page) I'll be restricting my attention to people who have made at least 1000 counts.
+
+```{python}
+totals = counts.groupby("username").size()
+usernames = [x for x in totals[totals >= 1000].index if not counters.is_banned_counter(x)]
+subset = counts.query("username in @usernames").copy()
+
+missing_values = 1000 - subset.groupby("username")["position"].nunique()
+sum(missing_values == 0)
+```
+
+We can drill a little deeper and ask how quickly each counter reached the full set. In theory it's possible to do that after only 1000 counts, but in practice it's extremely unlikely. Indeed, @tbl-complete shows that even the fastest counters needed multiple times that.
+
+```{python}
+#| label: tbl-complete
+#| tbl-cap: The fastest and slowest counters to count every number from 1 to 1000, according to how many counts they had when they reached the full sets
+
+completists = [username for username in usernames if missing_values[username] == 0]
+complete = subset.query("username in @completists").copy()
+complete["index"] = complete.index
+last_counts = complete.groupby("username").apply(lambda x: (x.groupby("position").head(1)).tail(1)["index"])
+totals = counts.groupby("username").cumcount()
+df = (last_counts
+      .reset_index(level=1)["index"]
+      .apply(lambda x: totals.loc[x])
+      .sort_values())
+headers = ["**Username**", "**Number of Counts**"]
+Markdown(pd.concat([df.tail().sort_values(ascending=False), df.head()]).to_markdown(headers=headers))
+```
+
+Similarly, we can take a look at which counters are only missing a few values before they have the full set:
+
+```{python}
+#| tbl-cap: The 10 counters with the most counts who are still missing up to five values in order to have counted the full set of numbers from 1 to 1000
+missing = [username for username in usernames if 0 < missing_values[username] <= 5]
+df = (subset
+      .query("username in @missing")
+      .groupby("username")
+      .size()
+      .sort_values(ascending=False)
+      .to_frame(name="n_counts"))
+df["missing_value"] = (subset
+                       .query("username in @missing")
+                       .groupby("username")["position"]
+                       .apply(lambda x: (set(range(1, 1001)) - set(x.unique()))))
+headers = ["**Username**", "**Total Counts**", "**Missing Values**"]
+Markdown(df.head(10).to_markdown(headers=headers))
+```
+
+# Efficient getters
+
+The counts on r/counting are organised in threads of 1000 counts, and getting the last count on a thread is a bit of a prize. Some counters are very motivated by gets, and some counters are less motivated by them, but everyone is aware of them.
+
+On average, everyone should have made 1000 counts for each get they have, but some counters have ratios that are significantly different from that. We can look at which counters have made the fewest total counts but still managed to obtain a get
+
+```{python}
+#| tbl-cap: The counters with the fewest total number of counts who still have at least one get.
+getters = counts.groupby("submission_id").last()
+gets = getters.reset_index()['username'].value_counts()
+gets.name = "n_gets"
+totals = pd.concat([counts['username'].value_counts().loc[gets.index], gets], axis=1)
+totals.columns = ["counts", "gets"]
+headers = ["**Username**", "**Counts**", "**Gets**"]
+Markdown(totals.sort_values(by='counts').head().to_markdown(headers=headers))
+```
+
+Looking at this list, `thephilsnipebar`{.verbatim} and `Ralph_Schaosid`{.verbatim} are immediately obvious as counting alts. `MeNowDealWithIt`{.verbatim} has made significantly more than one count, but deleted their account before they were picked up by the script, so I have no idea how many. `Hotshot2k4`{.verbatim} seems legit. They made three counts, the first of which was the 54k get. More recently, `ItzTaken`{.verbatim} got a [free get](http://reddit.com/r/counting/comments/mlqtr1/_/gtobrvf?context=3) that `VitaminB16`{.verbatim} left in the 4195k thread. Before that they had made two counts in the 2M era.
+
+```{python}
+lt_100 = (totals["counts"] < 100).sum()
+lt_1000 = (totals["counts"] < 1000).sum()
+s = (f"All in all we have ~{round(lt_100, -1)} counters with a get and less than 100 total counts "
+     f"and ~{round(lt_1000, -1)} with less than 1000 counts. "
+     "But again, there's a significant number of counts where I don't know the author, "
+     "and a significant number of usernames that are unknown aliases.")
+Markdown(s)
+```
+
+Maybe it's better instead to look only at counters who have made at least 1000 counts. The relevant comparison would then be the ratio of counts to gets. That's shown on @tbl-ratio, and veterans of r/counting will recognise some of the first five names as counters who like to try and snipe the get.
+
+```{python}
+#| label: tbl-ratio
+#| tbl-cap: The counters with at least 1000 counts who have the lowest and highest ratio of counts to gets.
+totals = totals.loc[totals["counts"] >= 1000].copy()
+totals["ratio"] = totals["counts"] / totals["gets"]
+totals = totals.sort_values(by="ratio")
+headers = ["**Username**", "**Counts**", "**Gets**", "**Counts / Gets**"]
+Markdown(pd.concat([totals.head(), totals.tail()]).to_markdown(headers=headers))
+```
+
+# The Overall Counting Distribution
+
+I promised to write about a distribution of counts, and so far I've mainly written about what numbers individual counters have or have not counted. And there hasn't been a single graph yet! But I promise that's about to change. A fun thing to look at first is how many people have counted each number from 1 to 1000. It wouldn't be far-fetched to assume that each number had been counted by roughly the same amount of people, but that's not at all what happens. @fig-distribution has the details.
+
+```{python}
+#| label: fig-distribution
+#| fig-cap: The amount of people who have counted each number. You can see a very sharp rise from the start of each thread to ~50, followed by a steady decline towards the get. The most popular number has been counted by more than twice as many people as the least popular.
+aggregated = counts.groupby("position")["username"].nunique()
+ax = aggregated.iloc[0:1000].plot(ylabel="Number of different counters", xlabel="Thread position")
+_ = ax.set_xlim(-5, 1000)
+```
+
+We can also look at the counting distributions for individual counters. Again, the default assumption would be that everybody has counted each number roughly the same number of times. Not too surprisingly, we see that this assumption holds better for some counters than it does for others. @fig-regularity shows the counting distributions for the most and least regular counter, and you can really see the difference between the two.
+
+The graph has been split into odds and evens, because there's generally a consistent difference between those two series. Intuitively, that makes sense, since most counts are made in runs where a given user makes every second counts. It's therefore not too strange that the behaviour at a value $n$ is more similar to that at $n - 2$ than at $n - 1$.
+
+```{python}
+#| label: fig-regularity
+#| fig-cap: The normalized number of counts made at each value for the most and least regular counters. If every number had been counted exactly the same amount of times, there would be a flat line at y=1
+grouped = complete[['username', 'position']].value_counts()
+cov = grouped.groupby(level=0).agg(lambda x: np.std(x) / np.mean(x)).sort_values()
+users = [cov.index[0], cov.index[-1]]
+data = grouped.loc[users].sort_index().to_frame().reset_index()
+data.columns = ['Counter', 'Thread Position', 'count']
+data.loc[data["Counter"] == users[0], 'count'] /= data.loc[data["Counter"] == users[0], 'count'].mean()
+data.loc[data["Counter"] == users[1], 'count'] /= data.loc[data["Counter"] == users[1], 'count'].mean()
+data["Parity"] = [["even", "odd"][val] for val in data.index % 2]
+ax = sns.lineplot(data=data, y='count', x="Thread Position", hue="Parity", style="Counter")
+_ = ax.set_ylabel("Relative frequency")
+```
+
+We can quantify the difference for each counter through the [Coefficient of Variation](https://en.wikipedia.org/wiki/Coefficient_of_variation), which expresses how far their counting distribution is from uniform. Here's a table of the five most and five least regular counters:
+
+```{python}
+Markdown(pd.concat([100*cov.head(), 100*cov.tail()])
+         .to_markdown(headers=["**Username**", "**Coefficient of Variation [%]**"]))
+```
+
+Of course, we saw from @fig-distribution that there's a significant variation in how many people have counted each number, so perhaps the uniform distribution is a bad model for how often we should expect each counter to have counted a particular number. Indeed, since twice as many people have counted the number 50 as have counted 1000, then ****on average**** people who have counted 1000 have done so twice as often as people who have counted 50. That leads to a model distribution that goes as $f(n) \propto \frac{1}{\textrm{number of people who have counted n}}$. We can again look through all the counters and see who has a counting distribution closest to this ideal:
+
+```{python}
+#| label: fig-model
+#| fig-cap: The distribution of counts for the counter who most closely matches the model distribution.
+distribution = 1 / aggregated.iloc[0:1000]
+distribution = distribution / distribution.mean()
+l2 = (complete[["username", "position"]]
+      .value_counts()
+      .groupby(level=0)
+      .agg(lambda x: ((x / x.mean() - distribution)**2).sum()))
+username = l2.sort_values().index[0]
+data = (complete[['username', 'position']]
+        .value_counts()
+        .loc[username]
+        .sort_index()
+        .to_frame()
+        .reset_index())
+data.columns = ['Thread Position', 'count']
+data['count'] /= data['count'].mean()
+data["Parity"] = [["even", "odd"][val] for val in data.index % 2]
+ax = sns.lineplot(data=data, y='count', x="Thread Position", hue="Parity", lw=2, linestyle="--")
+ax.plot(distribution, zorder=-1, color="0.7")
+ax.set_ylabel("Relative Frequency")
+_ = ax.set_title(username)
+```
+
+It's impressive just how closely david's counting frequency matches the toy model I suggested above!
+
+# Odds and evens
+
+In the previous section we saw that for some counters, there's a significant difference between how they've counted the odd numbers, and how they've counted the even numbers. The difference is not unexpected, since the nature of counting means that for any given run you'll be stuck on either the odd numbers or the even numbers.
+
+It is striking though just how large the difference can be for some counters, so here's a table of the most odd counters, the most even counters and the most balanced counters:
+
+```{python}
+#| label: tbl-parity
+#| tbl-cap: "Three sets of counters, organised by parity: Those with most odd counts, those with most even counts, and those who are closest to being perfectly balanced."
+counts["is_even"] = (counts["position"] % 2 == 0)
+offsets = ["1gm10t", "7hn2tm", "b471wg", "bz6r0g", "d6pgni", "ebnh39", "grggc0", "oj50hj", "ob4a2h", "t81gug"]
+for offset in offsets:
+    counts.loc[counts["submission_id"] == offset, 'is_even'] = 1 - counts.loc[counts["submission_id"] == offset, 'is_even']
+counts['is_odd'] = 1 - counts['is_even']
+subset = counts.query("username in @usernames")
+table = subset[['username', 'is_even', 'is_odd']].groupby('username').sum()
+table.columns=["n_even", "n_odd"]
+table['difference'] = table['n_even'] - table['n_odd']
+table['relative_difference'] = (table['n_even'] - table['n_odd']) / (table['n_even'] + table['n_odd']) * 100
+table['absolute_difference'] = abs(table['relative_difference'])
+headers=["**Username**", "**n_(even)**", "**n_(odd)**", "**Difference**", "**Relative Difference [%]**"]
+columns = ['n_even', 'n_odd', 'difference', 'relative_difference']
+Markdown(pd.concat([table.sort_values(by='difference').head(),
+                    table.sort_values(by='difference', ascending=False).head(),
+                    table.sort_values(by='absolute_difference').head()])[columns]
+         .to_markdown(headers=headers))
+```
+
+That's all for now!
