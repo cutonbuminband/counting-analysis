@@ -1,3 +1,16 @@
+* Structure
+** Adding side threads to the db
+A collapsed code section on combining csvs to one file, which is structured exactly like `counting.sqlite`, but which has an extra column in the submissions table describing which side thread we are dealing with, and which has an extra table characterising each side thread. The `rcounting` tools will need to be updated to write this column and update this table when the `side_thread=True`parameter is passed to the log thread script.
+
+- How to uniquely identify side threads: using the first thread link in the directory, like we do now. This can be done recursively: the id of a side thread is the same as the id of its parent; if there is no parent, then the id is just itself. Unfortunately that means potentially not being able to write a thread until we've gone all the way back -- so maybe it can be supplied by reconstructing just the tree and then using *that*, rather than having to go through all the comments.
+
+** The combined main + side threads hoc
+The goal of this is to do one combined table and one interactive graph.
+
+** The most frequent side threads
+The weird rugplot that I did ages ago would be nice to update...
+
+Tug of war as well, but maybe that's something for a different post
 * Side threads
 ** Adding them to the DB
 I want to get to a stage where the side threads and the main thread live in the same database. That involves updating the submissions table with a "thread_id" column to reference **which** thread we're currently working with, as well as adding a side thread table that describes each side thread. But I'm not there yet.

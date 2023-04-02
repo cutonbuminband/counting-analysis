@@ -1,8 +1,35 @@
+#+PROPERTY: header-args:jupyter-python  :session dst :kernel reddit
+#+PROPERTY: header-args    :pandoc t :tangle yes
+#+TITLE: Daylight Saving Time: On modelling and robustness
+
+We'll start off with some code to import the relevant packages and load the data.
+
+#+begin_src jupyter-python
+#| code-fold: true
+#| code-summary: "Code for importing packages and loading data"
+from pathlib import Path
+import pandas as pd
+import sqlite3
+import matplotlib.pyplot as plt
+import numpy as np
+from rcounting import counters, analysis, graph_tools
+import seaborn as sns
+sns.set_theme()
+from IPython.display import Markdown
+data_directory = Path("../../data")
+import itertools
+
+db = sqlite3.connect(data_directory / "counting.sqlite")
+counts = pd.read_sql("select username, submission_id, position from comments where position > 0 order by timestamp", db)
+counts["username"] = counts["username"].apply(counters.apply_alias)
+counts["position"] = (counts["position"] - 1) % 1000 + 1
+
+#+end_src
+
 * DST
    #+begin_src jupyter-python
      from datetime import datetime, timedelta
 
-     db = sqlite3.connect('data/counting.sqlite')
      days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
      def find_nth_weekday(year, month, weekday, n):
          d = datetime(year, month, 1 + 7 * (n - 1))
