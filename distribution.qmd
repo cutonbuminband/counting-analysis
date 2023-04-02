@@ -160,7 +160,7 @@ Markdown(pd.concat([100*cov.head(), 100*cov.tail()])
          .to_markdown(headers=["**Username**", "**Coefficient of Variation [%]**"]))
 ```
 
-Of course, we saw from @fig-distribution that there's a significant variation in how many people have counted each number, so perhaps the uniform distribution is a bad model for how often we should expect each counter to have counted a particular number. Indeed, since twice as many people have counted the number 50 as have counted 1000, then ****on average**** people who have counted 1000 have done so twice as often as people who have counted 50. That leads to a model distribution that goes as $f(n) \propto \frac{1}{\textrm{number of people who have counted n}}$. We can again look through all the counters and see who has a counting distribution closest to this ideal:
+Of course, we saw from @fig-distribution that there's a significant variation in how many people have counted each number, so perhaps the uniform distribution is a bad model for how often we should expect each counter to have counted a particular number. Indeed, since twice as many people have counted the number 50 as have counted 1000, then **on average** people who have counted 1000 have done so twice as often as people who have counted 50. That leads to a model distribution that goes as $f(n) \propto \frac{1}{\textrm{number of people who have counted n}}$. We can again look through all the counters and see who has a counting distribution closest to this ideal:
 
 ```{python}
 #| label: fig-model
