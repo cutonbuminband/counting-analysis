@@ -2,6 +2,13 @@
 #+PROPERTY: header-args    :pandoc t :tangle yes
 #+TITLE: Daylight Saving Time: On modelling and robustness
 
+In a [[https://cutonbuminband.github.io/counting-analysis/time.html][previous post]] I looked at the daily rhythm of [[http://www.reddit.com/r/counting][r/counting]], at what time of day the subreddit is most active, and how that has changed throughout the years. Zooming in on a small aspect, this post will focus on the effect of daylight saving time on the timing of counts.
+
+Now, DST occurs at different times (if at all) throughout the world, so I've focussed exclusively on DST in the US & Canada, where it starts on the second Sunday in March and ends on the first Sunday of November of each year^([*])^([+]).
+
+I have the UTC timestamps for every count, so it's possible to compare our counting activity just before DST comes into force with our counting activity just afterwards, and see whether there's a difference. If counts always follow the same pattern in local time, and all counters observe DST at the same time, then that should show up as a rigid shift in the data. 
+
+* Imports and loading
 We'll start off with some code to import the relevant packages and load the data.
 
 #+begin_src jupyter-python
@@ -25,8 +32,11 @@ counts["username"] = counts["username"].apply(counters.apply_alias)
 counts["position"] = (counts["position"] - 1) % 1000 + 1
 
 #+end_src
+* A first model
 
-* DST
+I've taken all the counts and looked at our activity in the week just before/after dst started/ended every year. To maximise the effect of DST, I've only picked the counts that occurred during the Monday-Friday, since I'd expect people's weekends to be less regular than the weekdays. [Here's](https://i.imgur.com/owaItiu.png) how that plot looks. You can see that the lines with DST generally leads the one without DST, and they have roughly the same shape, particularly in the interval between 12 noon and midnight. This seems to be the fingerprint of the DST change: a rigid shift of about one hour. Using a bit of fiddling I can calculate what the optimal shift is to make the two curves overlap, and get the result 67 minutes.
+
+
    #+begin_src jupyter-python
      from datetime import datetime, timedelta
 
@@ -55,6 +65,19 @@ counts["position"] = (counts["position"] - 1) % 1000 + 1
      autumn_control_1 = pd.concat([pd.read_sql(query.format(x + one_week, x + 2*one_week), db) for x in dst_end])
 
 #+end_src
+* Validating the model
+So, case closed, right?
+
+Not so fast.
+
+It could be that there's a shift of one hour every week and DST has nothing to do with it! More seriously, there are other changes happening throughout the time period apart from DST; in the spring the days are getting longer, particularly the evenings, and in the autumn it's the opposite. That means that these effects should cancel out slightly in the data. Still, it would be nice to check properly: what I should do is to also look at the periods two weeks before and after the change as controls, since they should have most of the other variation, but **not** the dst. 
+
+If I do that, I get the following two plots of [dst with control](https://i.imgur.com/8lYJNvc.png) and [no dst with control](https://i.imgur.com/xSNUJKp.png). Hm. It's not like they're exactly on top of one another. Or that they're following the same general shape. Checking what shifts would best makes the plots coincide gives values 58 minutes and 92 minutes. Oh. Um.
+
+For the [With dst](https://i.imgur.com/8lYJNvc.png) graph it's apparent that the two curves are qualitatively different, and describing one as a shift of the other is misleading: The green curve has a big peak at midnight which is completely missing from the blue one, as well as a pronounced dip in the afternoon. I can [plot](https://i.imgur.com/7mntAI0.png) how well the curves match as a function of time shift, and it's clear that there's a broad region of ±1 hour where they sort of line up; picking an arbitrary peak in this plateau doesn't really make sense. Phew, that's half the discrepancy swept under the carpet. 
+
+Looking at the graphs without dst, I'm fairly stumped. They don't match up super well, but it does seem like a shift of about 90 minutes would make them match up significantly better. That's most pronounced between midnight and 4am, which is already odd - that's not when rcounting is most active. Looking at the counters involved in the those two peaks in the green and the blue curve, they're significantly different; only 3 counters are present in the top ten lists for both the blue and the green curve, and most of the 17 counters involved are based outside the US & Canada. "Aha", I hear you cry, "maybe the counters involved are experiencing their own version of dst, just at a different time to the US". Unfortunately, that can't be the explanation: summer time in Europe starts at least two weeks after summer time in the US, so it can't interfere there. It also ends sooner than in the US, so if there was an effect from that, it should show up in the "with dst" plot.
+
 
 #+begin_src jupyter-python
   def prepare(df):
@@ -120,27 +143,10 @@ counts["position"] = (counts["position"] - 1) % 1000 + 1
   print(min(val, 1440 - val))
 #+end_src
 
-Time for some more graphs & analysis. I feel like I haven't posted any of those for a while!
 
-[Some time ago](https://www.reddit.com/r/counting/comments/nhm573/comment/gzbannj/?context=3) I had a look at how our counting activity varied throughout the day for a slightly arbitrary slice of counts, and saw that it was clearly possible to see when people were asleep, and even when particularly prolific counters took their regular breaks. I haven't worked much with time series, so I thought it might be fun to explore more things to do with our daily routine. On that topic, I started wondering if it's possible to see the effect of daylight saving time in the counting data.
-
-I have the UTC timestamps for every count, so it's possible to compare our counting activity just before DST comes into force with our counting activity just afterwards, and see whether there's a difference. If counts always follow the same pattern in local time, and all counters observe DST at the same time, then that should show up as a rigid shift in the data. Now, DST occurs at different times (if at all) throughout the world, so I've focussed exclusively on DST in the US & Canada, where it starts on the second Sunday in March and ends on the first Sunday of November of each year^([*])^([+]).
-
-I've taken all the counts and looked at our activity in the week just before/after dst started/ended every year. To maximise the effect of DST, I've only picked the counts that occurred during the Monday-Friday, since I'd expect people's weekends to be less regular than the weekdays. [Here's](https://i.imgur.com/owaItiu.png) how that plot looks. You can see that the lines with DST generally leads the one without DST, and they have roughly the same shape, particularly in the interval between 12 noon and midnight. This seems to be the fingerprint of the DST change: a rigid shift of about one hour. Using a bit of fiddling I can calculate what the optimal shift is to make the two curves overlap, and get the result 67 minutes. So, case closed, right?
-
-Not so fast.
-
-It could be that there's a shift of one hour every week and DST has nothing to do with it! More seriously, there are other changes happening throughout the time period apart from DST; in the spring the days are getting longer, particularly the evenings, and in the autumn it's the opposite. That means that these effects should cancel out slightly in the data. Still, it would be nice to check properly: what I should do is to also look at the periods two weeks before and after the change as controls, since they should have most of the other variation, but **not** the dst. 
-
-If I do that, I get the following two plots of [dst with control](https://i.imgur.com/8lYJNvc.png) and [no dst with control](https://i.imgur.com/xSNUJKp.png). Hm. It's not like they're exactly on top of one another. Or that they're following the same general shape. Checking what shifts would best makes the plots coincide gives values 58 minutes and 92 minutes. Oh. Um.
-
-For the [With dst](https://i.imgur.com/8lYJNvc.png) graph it's apparent that the two curves are qualitatively different, and describing one as a shift of the other is misleading: The green curve has a big peak at midnight which is completely missing from the blue one, as well as a pronounced dip in the afternoon. I can [plot](https://i.imgur.com/7mntAI0.png) how well the curves match as a function of time shift, and it's clear that there's a broad region of ±1 hour where they sort of line up; picking an arbitrary peak in this plateau doesn't really make sense. Phew, that's half the discrepancy swept under the carpet. 
-
-Looking at the graphs without dst, I'm fairly stumped. They don't match up super well, but it does seem like a shift of about 90 minutes would make them match up significantly better. That's most pronounced between midnight and 4am, which is already odd - that's not when rcounting is most active. Looking at the counters involved in the those two peaks in the green and the blue curve, they're significantly different; only 3 counters are present in the top ten lists for both the blue and the green curve, and most of the 17 counters involved are based outside the US & Canada. "Aha", I hear you cry, "maybe the counters involved are experiencing their own version of dst, just at a different time to the US". Unfortunately, that can't be the explanation: summer time in Europe starts at least two weeks after summer time in the US, so it can't interfere there. It also ends sooner than in the US, so if there was an effect from that, it should show up in the "with dst" plot.
+* Conclusion
 
 I've tried doing a bunch more stuff to get the dst signal more clearly, like only taking counts from counters I know to be based in the US or Canada, but nothing has worked particularly well. This is all getting rather far away from my field, so I think I'll leave it here. I'm sure that cleverer people than me have come up with a way of getting more signal out of this noise, but it's not something I know about.
-
-# Conclusion
 
 If you want to find out whether or not the US currently has DST, then looking at the comments on r/counting is a potentially viable method for doing so. Just googling it would probably be a better approach, though.
 
@@ -149,25 +155,3 @@ Hope you found this interesting!
 
 ^([*]) Apart from Hawaii and Arizona, which are weird
 ^([+]) That hasn't always been the DST rule, but it's been the case for as long as r/c has existed
-
-
-
-#+begin_src jupyter-python
-import pandas as pd
-import numpy as np
-
-def random_dates(start, end, n=10):
-
-    start_u = start.value//10**9
-    end_u = end.value//10**9
-
-    return pd.to_datetime(np.random.randint(start_u, end_u, n), unit='s')
-
-
-ids = ['ABC'[x] for x in np.random.randint(0, 3, 10)]
-start = pd.to_datetime('2022-01-01')
-end = pd.to_datetime('2022-01-05')
-df = pd.DataFrame(ids, index = sorted(random_dates(start, end)), columns=['id'])
-
-#+end_src
-
