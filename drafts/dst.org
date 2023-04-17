@@ -4,7 +4,7 @@
 
 In a [[https://cutonbuminband.github.io/counting-analysis/time.html][previous post]] I looked at the daily rhythm of [[http://www.reddit.com/r/counting][r/counting]], at what time of day the subreddit is most active, and how that has changed throughout the years. Zooming in on a small aspect, this post will focus on the effect of daylight saving time on the timing of counts.
 
-Now, DST occurs at different times (if at all) throughout the world, so I've focussed exclusively on DST in the US & Canada, where it starts on the second Sunday in March and ends on the first Sunday of November of each year^([*])^([+]).
+Now, DST occurs at different times (if at all) throughout the world, so I've focussed exclusively on DST in the US & Canada, where it starts on the second Sunday in March and ends on the first Sunday of November of each year[fn:1][fn:2].
 
 I have the UTC timestamps for every count, so it's possible to compare our counting activity just before DST comes into force with our counting activity just afterwards, and see whether there's a difference. If counts always follow the same pattern in local time, and all counters observe DST at the same time, then that should show up as a rigid shift in the data. 
 
@@ -12,136 +12,219 @@ I have the UTC timestamps for every count, so it's possible to compare our count
 We'll start off with some code to import the relevant packages and load the data.
 
 #+begin_src jupyter-python
-#| code-fold: true
-#| code-summary: "Code for importing packages and loading data"
-from pathlib import Path
-import pandas as pd
-import sqlite3
-import matplotlib.pyplot as plt
-import numpy as np
-from rcounting import counters, analysis, graph_tools
-import seaborn as sns
-sns.set_theme()
-from IPython.display import Markdown
-data_directory = Path("../../data")
-import itertools
+  #| code-fold: true
+  #| code-summary: "Code for importing packages and loading data"
+  from pathlib import Path
+  import pandas as pd
+  import sqlite3
+  import matplotlib.pyplot as plt
+  import numpy as np
+  from rcounting import counters, analysis, graph_tools, plots, units
+  from IPython.display import Markdown
+  import itertools
+  import seaborn as sns
+  from datetime import datetime, timedelta
+  sns.set_theme()
 
-db = sqlite3.connect(data_directory / "counting.sqlite")
-counts = pd.read_sql("select username, submission_id, position from comments where position > 0 order by timestamp", db)
-counts["username"] = counts["username"].apply(counters.apply_alias)
-counts["position"] = (counts["position"] - 1) % 1000 + 1
-
+  data_directory = Path("../../data")
+  db = sqlite3.connect(data_directory / "counting.sqlite")
 #+end_src
+
 * A first model
 
-I've taken all the counts and looked at our activity in the week just before/after dst started/ended every year. To maximise the effect of DST, I've only picked the counts that occurred during the Monday-Friday, since I'd expect people's weekends to be less regular than the weekdays. [Here's](https://i.imgur.com/owaItiu.png) how that plot looks. You can see that the lines with DST generally leads the one without DST, and they have roughly the same shape, particularly in the interval between 12 noon and midnight. This seems to be the fingerprint of the DST change: a rigid shift of about one hour. Using a bit of fiddling I can calculate what the optimal shift is to make the two curves overlap, and get the result 67 minutes.
+To see the effect of dst, we can compare the time of day plots for the weeks just before and just after DST is introduced, and see if there are any obvious differences. To maximise the effect of DST, it makes sense to focus only on counts that occurred Monday to Friday, since people's school or working hours should generally be more regular than their weekends.
 
 
-   #+begin_src jupyter-python
-     from datetime import datetime, timedelta
+To start with, we need some code to find when DST started on any given year
+#+begin_src jupyter-python
+  #| code-fold: true
+  #| code-summary: "Finding the start of DST for every year"
+  days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+  def find_nth_weekday(year, month, weekday, n):
+      d = datetime(year, month, 1 + 7 * (n - 1))
+      offset = (days.index(weekday.lower()) - d.weekday()) % 7
+      return d + timedelta(offset)
 
-     days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-     def find_nth_weekday(year, month, weekday, n):
-         d = datetime(year, month, 1 + 7 * (n - 1))
-         offset = (days.index(weekday.lower()) - d.weekday()) % 7
-         return d + timedelta(offset)
-
-     years = range(2012, 2022)
-     dst_start = [(find_nth_weekday(year, 3, 'sunday', 2)).timestamp() for year in years]
-     dst_end = [(find_nth_weekday(year, 11, 'sunday', 1)).timestamp() for year in years]
-     one_hour = 3600
-     one_day = 24 * one_hour
-     one_week = 7 * one_day
-     query = "select timestamp - 21600 as timestamp, username from comments where timestamp between {} and {} order by timestamp"
-
-     spring_control_1 = pd.concat([pd.read_sql(query.format(x - 2 * one_week, x - one_week), db) for x in dst_start])
-     spring_no_dst = pd.concat([pd.read_sql(query.format(x - one_week, x), db) for x in dst_start])
-     spring_dst = pd.concat([pd.read_sql(query.format(x, x + one_week), db) for x in dst_start])
-     spring_control_2 = pd.concat([pd.read_sql(query.format(x + one_week, x + 2 * one_week), db) for x in dst_start])
-
-     autumn_control_2 = pd.concat([pd.read_sql(query.format(x - 2 * one_week, x - one_week), db) for x in dst_end])
-     autumn_dst = pd.concat([pd.read_sql(query.format(x - one_week, x), db) for x in dst_end])
-     autumn_no_dst = pd.concat([pd.read_sql(query.format(x, x + one_week), db) for x in dst_end])
-     autumn_control_1 = pd.concat([pd.read_sql(query.format(x + one_week, x + 2*one_week), db) for x in dst_end])
-
+  WEEK = 7 * 24 * units.HOUR
+  OFFSET = 5 * units.HOUR
+  BIN_WIDTH = 30
+  nbins = int(units.DAY / BIN_WIDTH)
+  BIN_TO_MINUTE = (BIN_WIDTH / 60)
+  x = np.linspace(0, units.DAY, nbins, endpoint=False) + BIN_WIDTH / 2
+  dy = 0.07
+  years = range(2012, 2024)
+  dst_start = {year: (find_nth_weekday(year, 3, 'sunday', 2)).timestamp() + OFFSET for year in years}
 #+end_src
-* Validating the model
-So, case closed, right?
 
+With that out of the way, we'll select the weeks just before the start of DST and the weeks just after the end of DST for every year in r/counting's history.
+#+begin_src jupyter-python
+  query = f"select timestamp - {OFFSET} as timestamp, username from comments where timestamp between {{}} and {{}} order by timestamp"
+
+  def wrangle(data, week_map=dst_start):
+      data = data.reset_index(drop=True)
+      data["weekday"] = pd.to_datetime(data["timestamp"], unit="s").dt.weekday
+      data['time'] = (data['timestamp']) % units.DAY
+      data["week"] = (np.floor((data["timestamp"]
+                                - pd.to_datetime(data["timestamp"], unit="s").dt.year.map(week_map))
+                               / WEEK)
+                      .astype(int))
+      return data
+
+  spring_all = wrangle(pd.concat([pd.read_sql(query.format(x - 2*WEEK, x + 2*WEEK), db)
+                                  for x in dst_start.values()]))
+  spring = spring_all.query("weekday < 5").copy()
+  def generate_kdes(df):
+      n_weeks = len(df["week"].unique())
+      kdes = (df
+              .groupby("week")["time"]
+              .apply(lambda x: pd.Series(analysis.fft_kde(
+                  x,
+                  nbins,
+                  kernel="normal_distribution",
+                  sigma=0.02)[1] * nbins))
+              .reset_index()[["week", "time"]])
+      kdes["x"] = np.hstack(n_weeks*[x])
+      kdes.columns = ["week", "rate", "time"]
+      week_map = {-2: "Control without DST",
+                  -1: "Without DST",
+                  0: "With DST",
+                  1: "Control with DST"}
+      kdes["week_name"] = kdes["week"].map(week_map)
+      return kdes
+
+  spring_kdes = generate_kdes(spring)
+#+end_src
+
+And we're ready to plot the distribution of counts throughout the day for the week before and the week after the introduction of DST, and see how they differ
+#+begin_src jupyter-python
+  for week in ["With DST", "Without DST"]:
+      df = spring_kdes.query("week_name == @week")
+      plt.fill_between(df["time"], df["rate"], alpha=0.8, label=week)
+  ax = plt.gca()
+  plots.make_time_axis(ax)
+  ax.set_ylabel("Counting rate (arbitrary units)")
+  ax.set_xlabel("Time of Day (UTC - 5)")
+  ax.legend()
+#+end_src
+
+
+The shape of the two plots is similar, and it looks like the plot with DST is generally leading the one without, as would be expected if one was just a rigid shift of the other. But it's certainly not a perfect match, and it's hard to see from the curves just how much the DST curve is leading.
+
+We can try and see what the optimal shift of the DST curve would be to get it to match the curve without DST.
+#+begin_src jupyter-python
+  def calculate_shifted_overlap(df, week1, week2):
+      fixed = df.loc[df["week_name"] == week2, "rate"].to_numpy()
+      rotating = df.loc[df["week_name"] == week1, "rate"].to_numpy()
+      norm = np.trapz(fixed * rotating, x=x)
+      shifts = [np.trapz(fixed * np.roll(rotating, i), x=x) / norm for i in range(len(fixed))]
+      optimal_shift = (np.argmax(shifts) + nbins / 2) % nbins - nbins/2
+      return shifts, optimal_shift
+
+  shifts, optimal_shift = calculate_shifted_overlap(spring_kdes, "With DST","Without DST")
+
+  plt.plot(shifts)
+  plt.xlim(0, len(shifts))
+  ax = plt.gca()
+  ticks, labels = zip(*[(x * 120, f"{x:02d}:00") for x in range(0, 25, 3)])
+  ax.set_xticks(ticks)
+  ax.set_xticklabels(labels)
+  print(f"The optimal shift is {int(optimal_shift * BIN_TO_MINUTE)} minutes.")
+
+  ax.set_xlabel("Shift (hours)")
+  ax.set_ylabel("Similarity score")
+  plt.show()
+#+end_src
+
+That's a bit less than one hour, but it's still suggestive. Apparently we can use the counting data to determine whether or not DST is currently active.
+
+So, case closed, right?
+* Validating the model
 Not so fast.
 
-It could be that there's a shift of one hour every week and DST has nothing to do with it! More seriously, there are other changes happening throughout the time period apart from DST; in the spring the days are getting longer, particularly the evenings, and in the autumn it's the opposite. That means that these effects should cancel out slightly in the data. Still, it would be nice to check properly: what I should do is to also look at the periods two weeks before and after the change as controls, since they should have most of the other variation, but **not** the dst. 
+It could be that there's a shift of one hour every week and DST has nothing to do with it! More seriously, there are other changes happening throughout the time period apart from DST; in the spring the days are getting longer, particularly the evenings, and maybe that's what's driving the change. And I haven't at all looked at what happens when the clocks go back.
 
-If I do that, I get the following two plots of [dst with control](https://i.imgur.com/8lYJNvc.png) and [no dst with control](https://i.imgur.com/xSNUJKp.png). Hm. It's not like they're exactly on top of one another. Or that they're following the same general shape. Checking what shifts would best makes the plots coincide gives values 58 minutes and 92 minutes. Oh. Um.
-
-For the [With dst](https://i.imgur.com/8lYJNvc.png) graph it's apparent that the two curves are qualitatively different, and describing one as a shift of the other is misleading: The green curve has a big peak at midnight which is completely missing from the blue one, as well as a pronounced dip in the afternoon. I can [plot](https://i.imgur.com/7mntAI0.png) how well the curves match as a function of time shift, and it's clear that there's a broad region of ±1 hour where they sort of line up; picking an arbitrary peak in this plateau doesn't really make sense. Phew, that's half the discrepancy swept under the carpet. 
-
-Looking at the graphs without dst, I'm fairly stumped. They don't match up super well, but it does seem like a shift of about 90 minutes would make them match up significantly better. That's most pronounced between midnight and 4am, which is already odd - that's not when rcounting is most active. Looking at the counters involved in the those two peaks in the green and the blue curve, they're significantly different; only 3 counters are present in the top ten lists for both the blue and the green curve, and most of the 17 counters involved are based outside the US & Canada. "Aha", I hear you cry, "maybe the counters involved are experiencing their own version of dst, just at a different time to the US". Unfortunately, that can't be the explanation: summer time in Europe starts at least two weeks after summer time in the US, so it can't interfere there. It also ends sooner than in the US, so if there was an effect from that, it should show up in the "with dst" plot.
-
-
+** Adding more weeks
+Let's start by looking at what happens before DST is active. For the preceding analysis to be valid, we'd need the distribution of counts throughout the day to be basically the same for the period just before DST is active and the control period one week before that.
 #+begin_src jupyter-python
-  def prepare(df):
-      df['date'] = pd.to_datetime(df['timestamp'], unit='s')
-      df['time_of_day'] = df['timestamp'] % (one_day)
-      df['username'] = df['username'].apply(counters.apply_alias)
-      return df.loc[df['date'].dt.day_name().apply(lambda x: x in weekdays)].copy()
-
-
-  with_dst = pd.concat([autumn_dst, spring_dst])
-  no_dst = pd.concat([autumn_no_dst, spring_no_dst])
-  control_1 = pd.concat([autumn_control_1, spring_control_1])
-  control_2 = pd.concat([autumn_control_2, spring_control_2])
-
-  # with_dst = autumn_dst
-  # no_dst = autumn_no_dst
-  # control_1 = autumn_control_1
-  # control_2 = autumn_control_2
-  weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-#+end_src
-
-
-#+begin_src jupyter-python
-  import scipy.signal
-  n_bins = (24 * 60)
-  x_axis = np.linspace(0, one_day, n_bins + 1, endpoint=True)
-  labels = ['Control with dst', 'With DST', 'No DST', 'Control without dst']
-  fig, ax = plt.subplots(1)
-  signals = []
-  for i, df in enumerate([control_2, with_dst, no_dst, control_1]):
-      df = prepare(df)
-      hist, edges = np.histogram(df['time_of_day'], bins=x_axis)
-      signal = hist / np.sum(hist) * n_bins
-      signals.append(signal)
-      if i not in [2, 3]:
-          continue
-      ax.plot(edges[:-1], signal, label=labels[i])
-  ax.set_xlim(0, 24 * 3600 + 1)
-  ax.set_xticks([0 * hour, 3 * hour, 6 * hour, 9 * hour, 12 * hour,
-                 15 * hour, 18 * hour, 21 * hour, 24 * hour])
-  ax.set_xticklabels(['00:00', '03:00', '06:00', '09:00', '12:00',
-                      '15:00', '18:00', '21:00', '00:00'])
-  ax.legend()
-  ax.set_ylabel('Counting rate (arbitrary units)')
-#+end_src
-
-
-#+begin_src jupyter-python
-  af = scipy.fft.fft(signals[1]) / 1440 / np.pi
-  bf = scipy.fft.fft(signals[2])
-  c = scipy.fft.ifft(af * np.conj(bf))
-
-  print(np.linalg.norm(c - c.real))
-  plt.plot(c.real)
+  for week in ["Without DST", "Control without DST"]:
+      df = spring_kdes.query("week_name == @week")
+      plt.fill_between(df["time"], df["rate"], alpha=0.8, label=week)
   ax = plt.gca()
-  ax.set_xticks([0, 3 * 60, 6 * 60, 9 * 60, 12 * 60,
-                 15 * 60, 18 * 60, 21 * 60, 24 * 60])
-  ax.set_xticklabels(['0', '3', '6', '9', '12',
-                      '-9', '-6', '-3', '0'])
-  ax.set_xlabel('Time shift (hours)')
-  ax.set_ylabel('Overlap')
-  val = c.real.argmax()
-  print(min(val, 1440 - val))
+  plots.make_time_axis(ax)
+  ax.set_ylabel("Counting rate (arbitrary units)")
+  ax.set_xlabel("Time of Day (UTC - 5)")
+  ax.legend()
 #+end_src
+
+Hm. Those two curves might be slightly more aligned than the two with and without DST, but it's not super clear. We can check the optimal shift
+
+#+begin_src jupyter-python
+  _, optimal_shift = calculate_shifted_overlap(spring_kdes, "Without DST", "Control without DST")
+  print(f"The optimal shift is {int(optimal_shift * BIN_TO_MINUTE)} minutes.")
+#+end_src
+
+That's an even bigger shift than the one that happened when DST was introduced! We can plot four the curves for the two weeks before and after DST together and see if there's any obvious pattern.
+#+begin_src jupyter-python
+  spring_kdes["shifted_rate"] = spring_kdes["rate"] + (spring_kdes["week"] + 2) * dy
+  ax = sns.lineplot(spring_kdes, x="time", y="shifted_rate", hue="week_name")
+  ax.legend_.set_title("Week")
+  plots.make_time_axis(ax)
+  ax.legend(loc="upper center", ncol=2)
+  ax.set_ylabel("Counting rate (arbitrary units)")
+  ax.set_xlabel("Time of Day (UTC - 5)")
+  ax.set_ylim(0, 0.34)
+#+end_src
+
+If you didn't have the legend, would you be able to tell which two of these curves were with DST and which were without?
+
+** Including the end of DST
+We can try and see if including the data for when the clocks go back each year makes any difference
+#+begin_src jupyter-python
+  dst_end = {year: (find_nth_weekday(year, 11, 'sunday', 1)).timestamp() + OFFSET for year in years}
+  autumn_all = wrangle(pd.concat([pd.read_sql(query.format(x - 2*WEEK, x + 2*WEEK), db)
+                                  for x in dst_end.values()]),
+                       dst_end)
+  autumn_all["week"] = -1 - autumn_all["week"]
+  autumn = autumn_all.query("weekday < 5").copy()
+#+end_src
+
+#+begin_src jupyter-python
+  kdes = generate_kdes(pd.concat([spring, autumn]))
+  kdes["shifted_rate"] = kdes["rate"] + (kdes["week"] + 2) * dy
+  ax = sns.lineplot(kdes, x="time", y="shifted_rate", hue="week_name")
+  ax.legend_.set_title("Week")
+  plots.make_time_axis(ax)
+  ax.legend(loc="upper center", ncol=2)
+  ax.set_ylabel("Counting rate (arbitrary units)")
+  ax.set_xlabel("Time of Day (UTC - 5)")
+  ax.set_ylim(0, 0.34)
+  _, optimal_shift = calculate_shifted_overlap(kdes, "With DST", "Without DST")
+  print(f"The optimal shift is {int(optimal_shift * BIN_TO_MINUTE)} minutes.")
+
+#+end_src
+
+As before -- would you be able to tell which of these graphs were with DST and which were without if you didn't have the legend?
+
+The validation of the model has revealed that the activity on r/counting varies enough on a week to week basis that our initial assumptions are incorrect, and we can't just treat the activity as a constant background with a DST signal on top. If we want to see the effect of DST, we're going to have to come up with something more clever.
+
+* More Advanced Models
+
+The analysis of the previous section attempted to describe the activity on r/counting for all years /relative to the DST onset/, and then examined if there was any obvious change as we moved from winter time to summer time (and back again). 
+
+#+begin_src jupyter-python
+  spring_all["date"] = pd.to_datetime(spring_all["timestamp"], unit="s")
+  x = spring_all.groupby(spring_all["date"].dt.year).apply(lambda x: x.resample("300s", on="date").count())["timestamp"].to_frame()
+  x.columns = ["count"]
+  x["count"].div(x.groupby(pd.Grouper(level=1, freq='D'))["count"].transform("sum"))
+#+end_src
+
+
+- look at how much each day resembles the previous one and the previous week; plot across DST boundary and see if a change is visible
+- Find the most regular counter by the above metric and see if their stats show anything interesting
+- Disaggregate the years; apparently we don't have long-term correlations in how we count, so maybe the signal is getting lost there.
+
+
+
 
 
 * Conclusion
@@ -153,5 +236,5 @@ If you want to find out whether or not the US currently has DST, then looking at
 Hope you found this interesting!
 
 
-^([*]) Apart from Hawaii and Arizona, which are weird
-^([+]) That hasn't always been the DST rule, but it's been the case for as long as r/c has existed
+[fn:1]Apart from Hawaii and Arizona, which are weird
+[fn:2]That hasn't always been the DST rule, but it's been the case for as long as r/c has existed
