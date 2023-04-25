@@ -53,26 +53,26 @@ To start with, we need some code to find when DST started on any given year
   x = np.linspace(0, units.DAY, nbins, endpoint=False) + BIN_WIDTH / 2
   dy = 0.07
   years = range(2012, 2024)
-  dst_start = {year: (find_nth_weekday(year, 3, 'sunday', 2)).timestamp() + OFFSET for year in years}
+  import calendar
+  dst_start = {year: calendar.timegm(find_nth_weekday(year, 3, 'sunday', 2).timetuple()) for year in years}
 #+end_src
 
 With that out of the way, we'll select the weeks just before the start of DST and the weeks just after the end of DST for every year in r/counting's history.
-#+begin_src jupyter-python
-  query = f"select timestamp - {OFFSET} as timestamp, username from comments where timestamp between {{}} and {{}} order by timestamp"
 
+#+begin_src jupyter-python
+  #| code-summary: "Code for getting the raw data into slightly more manageable shape."
   def wrangle(data, week_map=dst_start):
       data = data.reset_index(drop=True)
-      data["weekday"] = pd.to_datetime(data["timestamp"], unit="s").dt.weekday
+      data["timestamp"] = data["timestamp"] - OFFSET
+      data["date"] = pd.to_datetime(data["timestamp"], unit="s")
       data['time'] = (data['timestamp']) % units.DAY
       data["week"] = (np.floor((data["timestamp"]
                                 - pd.to_datetime(data["timestamp"], unit="s").dt.year.map(week_map))
                                / WEEK)
                       .astype(int))
+      data["year"] = data["date"].dt.year
       return data
 
-  spring_all = wrangle(pd.concat([pd.read_sql(query.format(x - 2*WEEK, x + 2*WEEK), db)
-                                  for x in dst_start.values()]))
-  spring = spring_all.query("weekday < 5").copy()
   def generate_kdes(df):
       n_weeks = len(df["week"].unique())
       kdes = (df
@@ -85,14 +85,35 @@ With that out of the way, we'll select the weeks just before the start of DST an
               .reset_index()[["week", "time"]])
       kdes["x"] = np.hstack(n_weeks*[x])
       kdes.columns = ["week", "rate", "time"]
-      week_map = {-2: "Control without DST",
-                  -1: "Without DST",
-                  0: "With DST",
-                  1: "Control with DST"}
-      kdes["week_name"] = kdes["week"].map(week_map)
       return kdes
 
+#+end_src
+
+#+begin_src jupyter-python
+  query = f"select timestamp, username from comments where timestamp between {{}} and {{}} order by timestamp"
+
+  spring_all = wrangle(
+      pd.concat(
+          [
+              pd.read_sql(query.format(x + OFFSET - 3 * WEEK, x + OFFSET + 3 * WEEK), db)
+              for x in dst_start.values()
+          ]
+      )
+  )
+
+  def mask(df):
+      return ((df["date"].dt.weekday < 5)
+              & (-2 <= df["week"])
+              & (df["week"] < 2))
+
+  spring = spring_all[mask(spring_all)].copy()
   spring_kdes = generate_kdes(spring)
+  week_map = {-2: "Control without DST",
+              -1: "Without DST",
+              0: "With DST",
+              1: "Control with DST"}
+  spring_kdes["week_name"] = spring_kdes["week"].map(week_map)
+
 #+end_src
 
 And we're ready to plot the distribution of counts throughout the day for the week before and the week after the introduction of DST, and see how they differ
@@ -180,16 +201,20 @@ If you didn't have the legend, would you be able to tell which two of these curv
 ** Including the end of DST
 We can try and see if including the data for when the clocks go back each year makes any difference
 #+begin_src jupyter-python
-  dst_end = {year: (find_nth_weekday(year, 11, 'sunday', 1)).timestamp() + OFFSET for year in years}
-  autumn_all = wrangle(pd.concat([pd.read_sql(query.format(x - 2*WEEK, x + 2*WEEK), db)
+  dst_end = {year: calendar.timegm(find_nth_weekday(year, 11, 'sunday', 1).timetuple()) for year in years}
+  autumn_all = wrangle(pd.concat([pd.read_sql(query.format(x - 3*WEEK + OFFSET, x + 3*WEEK + OFFSET), db)
                                   for x in dst_end.values()]),
                        dst_end)
-  autumn_all["week"] = -1 - autumn_all["week"]
-  autumn = autumn_all.query("weekday < 5").copy()
+  autumn = autumn_all[mask(autumn_all)].copy()
+  autumn["week"] = -1 - autumn_all["week"]
+
 #+end_src
 
 #+begin_src jupyter-python
+  #| label: fig-autumn-kdes
+  #| fig-cap: The aggregated activity on r/counting in the two weeks leading up to the end of DST, and the two weeks after it.
   kdes = generate_kdes(pd.concat([spring, autumn]))
+  kdes["week_name"] = kdes["week"].map(week_map)
   kdes["shifted_rate"] = kdes["rate"] + (kdes["week"] + 2) * dy
   ax = sns.lineplot(kdes, x="time", y="shifted_rate", hue="week_name")
   ax.legend_.set_title("Week")
@@ -204,6 +229,8 @@ We can try and see if including the data for when the clocks go back each year m
 #+end_src
 
 As before -- would you be able to tell which of these graphs were with DST and which were without if you didn't have the legend?
+
+** Summing up
 
 The validation of the model has revealed that the activity on r/counting varies enough on a week to week basis that our initial assumptions are incorrect, and we can't just treat the activity as a constant background with a DST signal on top. If we want to see the effect of DST, we're going to have to come up with something more clever.
 
