@@ -236,32 +236,164 @@ The validation of the model has revealed that the activity on r/counting varies 
 
 * More Advanced Models
 
-The analysis of the previous section attempted to describe the activity on r/counting for all years /relative to the DST onset/, and then examined if there was any obvious change as we moved from winter time to summer time (and back again). 
+** Disaggregating the years
+What we did in the previous section was to aggregate the activity on r/counting across all the years it's been active. After that, we honed in on specific weeks near the time of year when the clocks change, and asked if we could see a shift in the data.
+
+We've seen that the activity on r/counting isn't stable over time, so maybe we're losing information by aggregating all the years, and the signal would be clearer if we looked at each year separately.
+
+Before we can make the comparison we're going to need a way of boiling down the information. As we saw on @fig-autumn-kdes and friends in the previous section, spotting the shift by eye is very difficult, and if we further split the plot into a new line for each year, it's going to become completely unreadable.
+
+We need a way of compressing each (week, year) pair to a single point: that way whatever plot we end up producing should hopefully still be legible.
+
+If we're willing to use the fact that we know the DST offset is one hour, we can reuse a lot of what we did in the previous section: For each week, we can calculate how much the distribution resembles that of the week before, and we can also calculate how much the distribution resembles the 1 hour /shifted/ distribution from the week before.
+
+For most of the year, it should be the case that the unshifted distribution is more similar then the shifted distribution. But, for the week where the clocks change, the shifted distribution should be more similar. So, we can calculate the similarity of the lagged and shifted distribution, and subtract the similarity of just the lagged distribution, and we've arrived at our DST fingerprint. For most weeks, it should give a negative value, but for the week where the clocks change (and maybe a bit afterwards if people are slow to adapt), it should give a positive value, before dropping back down to the negatives.
+
+Let's see how it goes!
 
 #+begin_src jupyter-python
-  spring_all["date"] = pd.to_datetime(spring_all["timestamp"], unit="s")
-  x = spring_all.groupby(spring_all["date"].dt.year).apply(lambda x: x.resample("300s", on="date").count())["timestamp"].to_frame()
-  x.columns = ["count"]
-  x["count"].div(x.groupby(pd.Grouper(level=1, freq='D'))["count"].transform("sum"))
+  def dst_fingerprint(df, period="spring"):
+      """Calculate the dst fingerprint for a single year"""
+      transitions = dst_start if period == "spring" else dst_end
+      x = df.resample("300s", on="date").size()
+      rates = x.div(x.groupby(pd.Grouper(freq="1d")).transform("sum")).to_frame(name="rate")
+      rates["year"] = rates.index.year
+      rates.index = rates.index - pd.to_datetime(rates.index.year.map(transitions), unit="s")
+      shifted = rates.shift(freq="7d")
+      shift = "-1h" if period == "spring" else "1h"
+      dst_shifted = shifted.shift(freq=shift).reset_index().set_index("date")
+
+      dfs = []
+
+      for df in [shifted, dst_shifted]:
+          f1 = pd.merge(rates, df, left_index=True, right_index=True)
+          f1["delta"] = (f1["rate_x"] - f1["rate_y"])**2
+          dfs.append(f1.groupby(f1.index.days // 7)["delta"].sum())
+
+
+      return dfs[1] - dfs[0]
+
+  def multiple_dst_fingerprints(df, period="spring"):
+      groups = df.groupby("year").apply(dst_fingerprint, period=period)
+      return groups.reset_index().melt(id_vars="year")
+
+  df = multiple_dst_fingerprints(spring_all)
+  ax = sns.relplot(df, x="date", y="value", hue="year", palette="plasma").ax
+  ax.axhline(0, color="0.5", linestyle="--")
+  ax.set_xlabel("Weeks after start of DST")
+  ax.set_ylabel("DST fingerprint")
 #+end_src
 
+Hm. This isn't very promising. The DST signal should show up in this plot in the fact that the points at 0 should lie significantly higher than all the others. That's not really the case at all.
 
-- look at how much each day resembles the previous one and the previous week; plot across DST boundary and see if a change is visible
-- Find the most regular counter by the above metric and see if their stats show anything interesting
-- Disaggregate the years; apparently we don't have long-term correlations in how we count, so maybe the signal is getting lost there.
+We can do the same thing for when DST ends, just for good measure, to see if the signal shows up there:
 
+#+begin_src jupyter-python
+  df = multiple_dst_fingerprints(autumn_all, "autumn")
+  ax = sns.relplot(df, x="date", y="value", hue="year", palette="plasma").ax
+  ax.axhline(0, color="0.5", linestyle="--")
+  ax.set_xlabel("Weeks after end of DST")
+  ax.set_ylabel("DST fingerprint")
+#+end_src
+
+Unfortunately, we didn't have any luck there either. Before giving up completely and abandoning this as a fool's errand, there's one or two more things we can try.
+
+** Disaggregating the different counters
+
+Regulars of r/counting will know that it's not the same people who count every week, as evidenced by the fact that the top fifteen counters list helpfully provided in each FTF isn't just a repeat from week to week. Perhaps this is one cause of the lack of pattern in the counting times. It's certainly possible to imagine a world where counters are perfectly regular, but the different schedules of different counters coupled with their different activity from week to week adds up to a huge mess.
+
+So we can keep going with the disaggregation, and see if we get a clearer signal when we compare the activity of individual counters from week to week. 
+
+
+Instead of calculating the DST fingerprint described in the previous section, we'll be looking just at the week consistency score, which is just how similar each week is to the preceding one. This is slightly easier to work with[fn:3], and should show much the same thing. The only difference is that the sign of DST will be a dip at 0, instead of a peak.
+#+begin_src jupyter-python
+   def similarity_score(df):
+       kdes = generate_kdes(df)
+       groups = kdes.groupby("week")["rate"]
+       norm = groups.transform(np.linalg.norm)
+       kdes["rate"] /= norm
+       overlaps = ((kdes.
+                    set_index(["week", "time"])
+                    .groupby("time")["rate"]
+                    .diff() ** 2)
+                   .groupby(level=0)
+                   .sum())
+       return 1 - overlaps / 2
+#+end_src
+
+#+begin_src jupyter-python
+  scores = spring_all.groupby(["year", "username"]).apply(similarity_score)
+  scores.name = "fingerprint"
+  scores[scores == 1] = 0
+  sizes = (spring_all.groupby(["year", "username"]).size()
+           / len(spring_all))
+  similarity = scores.reset_index(level=2)
+  similarity["similarity"] *= sizes
+  similarity = similarity[similarity["similarity"] != 0]
+  ax=sns.relplot(data=(similarity
+                       .groupby(["week"])["similarity"]
+                       .sum()
+                       .reset_index()),
+                 x="week",
+                 y="similarity").ax
+                 # hue="year",
+                 # palette="plasma").ax
+  ax.set_xlabel("Weeks after start of DST")
+  ax.set_ylabel("Week consistency score")
+#+end_src
+
+** Looking only at the most regular counters
+- Strategy:
+  - Find the most regular counter(s) four weeks before the start of DST each year
+  - Sanity check that they probably are located in the US
+  - And then use the method just to describe to see if there's a difference around DST
+  - Selecting on a different period than the one we're testing is important, because reasons.
+
+#+begin_src jupyter-python
+  counters = (scores[scores != 1]
+              .reset_index()
+              .query("week== -2")
+              .sort_values(["year", "similarity"], ascending=False)
+              .groupby("year")
+              .head(5)
+              .set_index(["year", "username"])
+              .index)
+  subset = spring_all.set_index(["year", "username"]).loc[counters]
+  scores = subset.groupby(["year", "username"]).apply(similarity_score)
+  scores.name = "similarity"
+  scores[scores == 1] = 0
+  sizes = subset.groupby(["year", "username"]).size() / len(subset)
+  similarity = scores.reset_index(level=2)
+  similarity["similarity"] *= sizes
+  similarity = similarity[similarity["similarity"] != 0]
+  ax=sns.relplot(data=(similarity
+                       .groupby(["week"])["similarity"]
+                       .sum()
+                       .reset_index()),
+                 x="week",
+                 y="similarity",).ax
+                 # hue="year",
+                 # palette="plasma").ax
+  ax.set_xlabel("Weeks after start of DST")
+  ax.set_ylabel("Week consistency score")
+#+end_src
 
 
 
 
 * Conclusion
 
-I've tried doing a bunch more stuff to get the dst signal more clearly, like only taking counts from counters I know to be based in the US or Canada, but nothing has worked particularly well. This is all getting rather far away from my field, so I think I'll leave it here. I'm sure that cleverer people than me have come up with a way of getting more signal out of this noise, but it's not something I know about.
+If you want to find out whether or not the US currently has DST, then looking at the comments on r/counting is not a viable method for doing so. I would suggest just googling it instead.
 
-If you want to find out whether or not the US currently has DST, then looking at the comments on r/counting is a potentially viable method for doing so. Just googling it would probably be a better approach, though.
+This post ended up being much longer than expected (and a fair bit longer than the reddit comment that it's based on), mainly because I've had to change the conclusion along the way.
 
-Hope you found this interesting!
+In the original, and in my first draft, I wasn't as thorough with my robustness analysis as I've been here. That meant that i was more convinced by the hints of a DST signal in the data, and the conclusion reflected that. Unfortunately, this post has demonstrated that it just isn't there. On the positive side, the post has also demonstrated the value of checking assumptions, validating any model that you might come up with, and generally having a healthy dose of skepticism towards any new discoveries -- especially your own.
+
+And that's perhaps as good a place as any to end.
+
+Until next time!
 
 
 [fn:1]Apart from Hawaii and Arizona, which are weird
 [fn:2]That hasn't always been the DST rule, but it's been the case for as long as r/c has existed
+[fn:3]In that it involves slightly less fiddling about with indices
