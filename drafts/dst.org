@@ -43,7 +43,7 @@ To start with, we need some code to find when DST started on any given year
   def find_nth_weekday(year, month, weekday, n):
       d = datetime(year, month, 1 + 7 * (n - 1))
       offset = (days.index(weekday.lower()) - d.weekday()) % 7
-      return d + timedelta(offset)
+      return d + timedelta(offset) + timedelta(hours=2)
 
   WEEK = 7 * 24 * units.HOUR
   OFFSET = 5 * units.HOUR
