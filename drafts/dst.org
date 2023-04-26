@@ -51,7 +51,7 @@ To start with, we need some code to find when DST started on any given year
   nbins = int(units.DAY / BIN_WIDTH)
   minval, maxval = -3, 3
   BIN_TO_MINUTE = (BIN_WIDTH / 60)
-  x = np.linspace(0, units.DAY, nbins, endpoint=False) + BIN_WIDTH / 2
+  time_axis = np.linspace(0, units.DAY, nbins, endpoint=False) + BIN_WIDTH / 2
   dy = 0.07
   years = range(2012, 2024)
   import calendar
@@ -84,7 +84,7 @@ With that out of the way, we'll select the weeks just before the start of DST an
                   kernel="normal_distribution",
                   sigma=0.02)[1] * nbins))
               .reset_index()[["week", "time"]])
-      kdes["x"] = np.hstack(n_weeks*[x])
+      kdes["time_axis"] = np.hstack(n_weeks*[time_axis])
       kdes.columns = ["week", "rate", "time"]
       return kdes
 
@@ -137,8 +137,8 @@ We can try and see what the optimal shift of the DST curve would be to get it to
   def calculate_shifted_overlap(df, week1, week2):
       fixed = df.loc[df["week_name"] == week2, "rate"].to_numpy()
       rotating = df.loc[df["week_name"] == week1, "rate"].to_numpy()
-      norm = np.trapz(fixed * rotating, x=x)
-      shifts = [np.trapz(fixed * np.roll(rotating, i), x=x) / norm for i in range(len(fixed))]
+      norm = np.trapz(fixed * rotating, x=time_axis)
+      shifts = [np.trapz(fixed * np.roll(rotating, i), x=time_axis) / norm for i in range(len(fixed))]
       optimal_shift = (np.argmax(shifts) + nbins / 2) % nbins - nbins/2
       return shifts, optimal_shift
 
