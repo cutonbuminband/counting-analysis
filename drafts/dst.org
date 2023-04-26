@@ -49,6 +49,7 @@ To start with, we need some code to find when DST started on any given year
   OFFSET = 5 * units.HOUR
   BIN_WIDTH = 30
   nbins = int(units.DAY / BIN_WIDTH)
+  minval, maxval = -3, 3
   BIN_TO_MINUTE = (BIN_WIDTH / 60)
   x = np.linspace(0, units.DAY, nbins, endpoint=False) + BIN_WIDTH / 2
   dy = 0.07
@@ -95,7 +96,7 @@ With that out of the way, we'll select the weeks just before the start of DST an
   spring_all = wrangle(
       pd.concat(
           [
-              pd.read_sql(query.format(x + OFFSET - 3 * WEEK, x + OFFSET + 3 * WEEK), db)
+              pd.read_sql(query.format(x + OFFSET - minval * WEEK, x + OFFSET + maxval * WEEK), db)
               for x in dst_start.values()
           ]
       )
@@ -202,9 +203,16 @@ If you didn't have the legend, would you be able to tell which two of these curv
 We can try and see if including the data for when the clocks go back each year makes any difference
 #+begin_src jupyter-python
   dst_end = {year: calendar.timegm(find_nth_weekday(year, 11, 'sunday', 1).timetuple()) for year in years}
-  autumn_all = wrangle(pd.concat([pd.read_sql(query.format(x - 3*WEEK + OFFSET, x + 3*WEEK + OFFSET), db)
-                                  for x in dst_end.values()]),
-                       dst_end)
+  autumn_all = wrangle(
+      pd.concat(
+          [
+              pd.read_sql(query.format(x + OFFSET - minval * WEEK, x + OFFSET + maxval * WEEK), db)
+              for x in dst_end.values()
+          ]
+      ),
+      dst_end
+  )
+
   autumn = autumn_all[mask(autumn_all)].copy()
   autumn["week"] = -1 - autumn_all["week"]
 
