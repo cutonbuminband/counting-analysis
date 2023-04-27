@@ -16,6 +16,7 @@ website:
         - counting_counters.qmd
         - time.qmd
         - distribution.qmd
+        - dst.qmd
     - examples.qmd
   page-footer:
     center:
