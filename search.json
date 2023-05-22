@@ -133,6 +133,13 @@
     "text": "This is a brief post on some preliminary work I’ve done looking at the side threads on rcounting. The post is split into two sections. First, how I’ve worked with the log files to get them into a structured database that’s easier for me to reason about, and after that, how I’veused the logs to plot two different charts: A cumulative total of the number of counts made in each thread, and the most popular side thread over time.\nIt’s also the first time I’m working with the plotly library to make an interactive graph, so please let me know if you have any comments on that!"
   },
   {
+    "objectID": "side_threads.html#the-most-prolific-side-thread-counters",
+    "href": "side_threads.html#the-most-prolific-side-thread-counters",
+    "title": "All about side threads",
+    "section": "The most prolific side thread counters",
+    "text": "The most prolific side thread counters\nWe can use basically the same approach to find and plot the top side thread counters over time,\n\n\nCode\ncounts = comments.groupby(\"username\").size().sort_values(ascending=False)\ntop_counters = [x for x in counts.index if not counters.is_banned_counter(x)][:25]\ndf = comments.loc[comments[\"username\"].isin(top_counters), [\"username\", \"timestamp\"]]\ntotal = (\n    pd.get_dummies(df.set_index(pd.to_datetime(df[\"timestamp\"], unit=\"s\"))[\"username\"])\n    .resample(frequency)\n    .sum()\n    .cumsum()\n    .melt(ignore_index=False)\n    .reset_index()\n    .rename(\n        {\"timestamp\": \"Date\", \"variable\": \"Counter\", \"value\": \"Total Counts\"}, axis=1\n    )\n)\n\nfig = px.line(\n    data_frame=total,\n    x=\"Date\",\n    y=\"Total Counts\",\n    line_group=\"Counter\",\n    color=\"Counter\",\n    category_orders={\"Counter\": top_counters},\n)\nfig.show()\n\n\n\n                                                \n\n\nA couple of things stand out about this plot too. The first is how consistent u/TheNitromeFan’s counting rate was between late 2017 and the start of 2022, followed by his semi-retirement since then. Similarly, you can see how atomicimploder bascially left the subreddit for a couple of years before coming back to reclaim his number 2 spot in the total number of side thread counts.\nIt’s also fun to see how many of our counters have wildly varying rates of side thread activity over time, which makes for bumpy lines on this plot."
+  },
+  {
     "objectID": "side_threads.html#plotting-the-most-popular-side-thread-over-time",
     "href": "side_threads.html#plotting-the-most-popular-side-thread-over-time",
     "title": "All about side threads",
