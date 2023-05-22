@@ -119,7 +119,7 @@ thread_names.to_sql("threads", side_threads_db, index=False, if_exists="replace"
 
 And that's the database created, with the structure that each comment belongs to a submission, and each submission belongs to a thread; and with information about each of those stored in their respective tables. Onward to the analysis!
 
-# Cumulative counts and most popular threads {#sec-analysis}
+# Analysing side thread data {#sec-analysis}
 
 The first and most obvious thing to do with the side thread data is to plot a chart of the cumulative total number of counts in each thread.
 
@@ -127,12 +127,13 @@ I'll pretend that I didn't just create the side threads database, so I'll start 
 
 ```{python}
 comments = pd.read_sql(
-    "SELECT comments.timestamp, submissions.thread_id "
+    "SELECT comments.timestamp, submissions.thread_id, comments.username "
     "FROM comments JOIN submissions "
     "ON comments.submission_id == submissions.submission_id "
     "ORDER by comments.timestamp",
     side_threads_db,
 )
+comments["username"] = comments["username"].apply(counters.apply_alias)
 known_threads = pd.read_sql("select * from threads", side_threads_db).set_index("thread_id")
 ```
 
@@ -156,13 +157,10 @@ subset = subset.set_index(pd.to_datetime(subset["timestamp"], unit="s"))["thread
 resampled = pd.get_dummies(subset.sort_index()).resample(frequency).sum()
 ```
 
-From there it's just a short hop and a skip to the chart I described
+From there it's just a short hop and a skip to the chart I described. As teased earlier, the chart is interactive and you can pan and zoom as you like. You can also highlight specific threads by double clicking the legend.
 
 ```{python}
-# | label: fig-host
-# | fig-cap: The cumulative counts in each side thread.
 # | column: body-outset
-# | cap-location: margin
 cumulative = (
     resampled.expanding()
     .sum()
@@ -170,13 +168,13 @@ cumulative = (
     .melt(ignore_index=False)
     .reset_index()
 )
-mapping = {"timestamp": "Year", "variable": "Side Thread", "value": "Total Counts"}
+mapping = {"timestamp": "Date", "variable": "Side Thread", "value": "Total Counts"}
 order = list(
     cumulative.groupby("variable")["value"].last().sort_values(ascending=False).index
 )
 fig = px.line(
     data_frame=cumulative.rename(mapping, axis=1),
-    x="Year",
+    x="Date",
     y="Total Counts",
     line_group="Side Thread",
     color="Side Thread",
@@ -188,6 +186,42 @@ fig.show()
 Looking a the chart, there are a couple of interesting things to notice. One is the impressive and sustained rise of `tug of war`, which is by far our most popular side thread. The next is how well we've managed to keep parity between `binary` and `hexadecimal` over the years. Apart from a brief blip in September 2020[^2] the two lines are basically on top of each other for their entire history. Then there's the impressive rise of `no repeating digits` starting in mid 2019, and continuing until the present.
 
 Below the top five threads we have 20 threads that are basically track each other, all growing at approximately the same rate. In this group, it's maybe interesting to note the growth of `age`, which wasn't started until mid-2019, and saw a big rise, before levelling off after the start of 2022. And then there's `time`, which made it to the very top of this group, before completely halting in late 2022.
+
+## The most prolific side thread counters
+
+We can use basically the same approach to find and plot the top side thread counters over time,
+
+```{python}
+#| column: body-outset
+counts = comments.groupby("username").size().sort_values(ascending=False)
+top_counters = [x for x in counts.index if not counters.is_banned_counter(x)][:25]
+df = comments.loc[comments["username"].isin(top_counters), ["username", "timestamp"]]
+total = (
+    pd.get_dummies(df.set_index(pd.to_datetime(df["timestamp"], unit="s"))["username"])
+    .resample(frequency)
+    .sum()
+    .cumsum()
+    .melt(ignore_index=False)
+    .reset_index()
+    .rename(
+        {"timestamp": "Date", "variable": "Counter", "value": "Total Counts"}, axis=1
+    )
+)
+
+fig = px.line(
+    data_frame=total,
+    x="Date",
+    y="Total Counts",
+    line_group="Counter",
+    color="Counter",
+    category_orders={"Counter": top_counters},
+)
+fig.show()
+```
+
+A couple of things stand out about this plot too. The first is how consistent `u/TheNitromeFan`'s counting rate was between late 2017 and the start of 2022, followed by his semi-retirement since then. Similarly, you can see how `atomicimploder` bascially left the subreddit for a couple of years before coming back to reclaim his number 2 spot in the total number of side thread counts.
+
+It's also fun to see how many of our counters have wildly varying rates of side thread activity over time, which makes for bumpy lines on this plot.
 
 ## Plotting the most popular side thread over time
 
