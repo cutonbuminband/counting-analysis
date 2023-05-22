@@ -2,42 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/time.html</loc>
-    <lastmod>2023-04-27T11:45:35.631Z</lastmod>
+    <lastmod>2023-05-22T18:40:01.835Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/about.html</loc>
-    <lastmod>2023-04-27T11:45:36.895Z</lastmod>
+    <lastmod>2023-05-22T18:40:02.855Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/examples.html</loc>
-    <lastmod>2023-04-27T11:45:39.251Z</lastmod>
+    <lastmod>2023-05-22T18:40:04.787Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/separators.html</loc>
-    <lastmod>2023-04-27T11:45:41.827Z</lastmod>
+    <lastmod>2023-05-22T18:40:06.903Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/runs.html</loc>
-    <lastmod>2023-04-27T11:45:44.403Z</lastmod>
+    <lastmod>2023-05-22T18:40:09.279Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/counting_counters.html</loc>
-    <lastmod>2023-04-27T11:45:47.719Z</lastmod>
+    <lastmod>2023-05-22T18:40:12.203Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/network.html</loc>
-    <lastmod>2023-04-27T11:45:52.443Z</lastmod>
+    <lastmod>2023-05-22T18:40:16.115Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/index.html</loc>
-    <lastmod>2023-04-27T11:45:56.507Z</lastmod>
+    <lastmod>2023-05-22T18:40:19.311Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/distribution.html</loc>
-    <lastmod>2023-04-27T11:46:01.415Z</lastmod>
+    <lastmod>2023-05-22T18:40:23.567Z</lastmod>
   </url>
   <url>
     <loc>https://cutonbuminband.github.io/counting-analysis/dst.html</loc>
-    <lastmod>2023-04-27T11:46:07.007Z</lastmod>
+    <lastmod>2023-05-22T18:40:28.659Z</lastmod>
+  </url>
+  <url>
+    <loc>https://cutonbuminband.github.io/counting-analysis/side_threads.html</loc>
+    <lastmod>2023-05-22T18:40:35.643Z</lastmod>
   </url>
 </urlset>
