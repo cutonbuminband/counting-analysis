@@ -17,6 +17,7 @@ website:
         - time.qmd
         - distribution.qmd
         - dst.qmd
+        - side_threads.qmd
     - examples.qmd
   page-footer:
     center:

@@ -1,0 +1,221 @@
+---
+title: All about side threads
+---
+
+# Introduction
+
+This is a brief post on some preliminary work I've done looking at the side threads on `rcounting`. The post is split into two sections. First, how I've worked with the log files to get them into a structured database that's easier for me to reason about, and after that, how I'veused the logs to plot two different charts: A cumulative total of the number of counts made in each thread, and the most popular side thread over time.
+
+It's also the first time I'm working with the plotly library to make an interactive graph, so please let me know if you have any comments on that!
+
+# Adding side threads to a single database
+
+For me it's easier to work with a single database file with a well-defined structure than it is to work with a bunch of csv files, especially when I want to analyse all the side thread counts together. This section is mainly a bunch of code to go from one representation to the other[^1]. Feel free to skip to @sec-analysis if you want!
+
+```{python}
+# | code-fold: true
+# | code-summary: "Code for importing packages and loading data"
+import itertools
+import os
+import sqlite3
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.io as pio
+import seaborn as sns
+from IPython.display import Markdown
+from rcounting import analysis, counters, graph_tools, parsing
+from rcounting.models import submission_to_dict
+from rcounting.reddit_interface import reddit
+
+sns.set_theme()
+data_directory = Path(os.getenv("HOME")) / "Downloads" / "side_threads"
+side_threads_db = sqlite3.connect(
+    Path(os.getenv("COUNTING_DATA")) / "side_threads.sqlite"
+)
+```
+
+I'll start by loading in all the csv files to a single `DataFrame`, with an additional column identifying which file every comment came from. I then save the comments (minus this last column) to a table in the database. I don't add the side thread information to this table because that's a property of submissions, not of comments.
+
+```{python}
+# | eval: false
+filenames = os.listdir(data_directory)
+filename = filenames[0]
+df = pd.concat(
+    [
+        pd.read_csv(
+            data_directory / filename,
+            names=["body", "username", "timestamp", "comment_id", "submission_id"],
+            dtype={"body": str},
+        ).assign(thread=filename.replace("_log.csv", "").replace("_", " "))
+        for filename in filenames
+    ],
+    axis=0,
+    ignore_index=True,
+)
+
+df.drop(["thread"], axis=1).to_sql(
+    "comments", side_threads_db, index=False, if_exists="replace"
+)
+```
+
+I want to store more information about each submission than just the submission id, so I'll use the `info` endpoint of the reddit API to get that in batches of up to 100 submissions per request. This only works because I know the id of each submission.
+
+```{python}
+# | eval: false
+submissions = reddit.info(fullnames=["t3_" + x for x in df["submission_id"].unique()])
+submissions = pd.DataFrame(
+    [submission_to_dict(submission) for submission in submissions]
+)
+```
+
+The final piece of information I need to write in the submissions table is which thread every submission belongs to. I'll follow the standard practice of the directory and identify each side thread with the id of the first submission in the thread. That's a unique identifier which doesn't change, so it makes for a good key.
+
+```{python}
+# | eval: false
+submissions = submissions.merge(
+    pd.concat(
+        [
+            df.drop_duplicates("submission_id")["submission_id"],
+            df.drop_duplicates("submission_id")
+            .groupby("thread")
+            .transform("first")["submission_id"]
+            .rename("thread_id"),
+        ],
+        axis=1,
+    ),
+    left_on="submission_id",
+    right_on="submission_id",
+)
+```
+
+And then I'll write the submissions table to the database.
+
+```{python}
+# | eval: false
+submissions.to_sql("submissions", side_threads_db, index=False, if_exists="replace")
+```
+
+The thread id is a useful key for identifying a given thread, but it's hard to understand which thread we're working with if we just have the id. To make things easier, I'll store a human-readable name as well, in a threads table. For many of the threads, I already have my own name for them in the `rcounting` tools, which might differ from the one derived from the name of the csv file. So for the ones that I've already given a name, I'll use that one, and for the new threads, I'll use the name from the csv files.
+
+In the future, this table could be populated with some more information, such as the length of each thread.
+
+```{python}
+# | eval: false
+from rcounting.side_threads import known_thread_ids
+thread_names = df.groupby("thread")["submission_id"].first().reset_index().rename({"thread": "thread_name", "submission_id": "thread_id"}, axis=1)
+def rename_thread(series):
+    return (
+        series["thread_name"]
+        if series["thread_id"] not in known_thread_ids
+        else known_thread_ids[series["thread_id"]]
+    )
+thread_names["thread_name"] = thread_names.apply(rename_thread, axis=1)
+thread_names.to_sql("threads", side_threads_db, index=False, if_exists="replace")
+```
+
+And that's the database created, with the structure that each comment belongs to a submission, and each submission belongs to a thread; and with information about each of those stored in their respective tables. Onward to the analysis!
+
+# Cumulative counts and most popular threads {#sec-analysis}
+
+The first and most obvious thing to do with the side thread data is to plot a chart of the cumulative total number of counts in each thread.
+
+I'll pretend that I didn't just create the side threads database, so I'll start by loading in some comments:
+
+```{python}
+comments = pd.read_sql(
+    "SELECT comments.timestamp, submissions.thread_id "
+    "FROM comments JOIN submissions "
+    "ON comments.submission_id == submissions.submission_id "
+    "ORDER by comments.timestamp",
+    side_threads_db,
+)
+known_threads = pd.read_sql("select * from threads", side_threads_db).set_index("thread_id")
+```
+
+In the thread directory, we treat the top 25 threads specially, and so I'll focus this analysis on those threads. This also helps make the plots slightly less crowded.
+
+I'll use a `groupby` and a `size` to get the total number of counts in each thread, and use that to find the top 25 threads. Then I select only the comments in those threads, and get a 12 hour rolling count of how many comments were made in each side thread.
+
+```{python}
+top_threads = (
+    comments.groupby("thread_id")
+    .size()
+    .sort_values(ascending=False)
+    .head(25)
+    .reset_index(name="size")
+)
+frequency = "12h"
+subset = top_threads.merge(comments, left_on="thread_id", right_on="thread_id")[
+    ["thread_id", "timestamp"]
+]
+subset = subset.set_index(pd.to_datetime(subset["timestamp"], unit="s"))["thread_id"]
+resampled = pd.get_dummies(subset.sort_index()).resample(frequency).sum()
+```
+
+From there it's just a short hop and a skip to the chart I described
+
+```{python}
+# | label: fig-host
+# | fig-cap: The cumulative counts in each side thread.
+# | column: body-outset
+# | cap-location: margin
+cumulative = (
+    resampled.expanding()
+    .sum()
+    .rename(known_threads.to_dict()["thread_name"], axis=1)
+    .melt(ignore_index=False)
+    .reset_index()
+)
+mapping = {"timestamp": "Year", "variable": "Side Thread", "value": "Total Counts"}
+order = list(
+    cumulative.groupby("variable")["value"].last().sort_values(ascending=False).index
+)
+fig = px.line(
+    data_frame=cumulative.rename(mapping, axis=1),
+    x="Year",
+    y="Total Counts",
+    line_group="Side Thread",
+    color="Side Thread",
+    category_orders={"Side Thread": order},
+)
+fig.show()
+```
+
+Looking a the chart, there are a couple of interesting things to notice. One is the impressive and sustained rise of `tug of war`, which is by far our most popular side thread. The next is how well we've managed to keep parity between `binary` and `hexadecimal` over the years. Apart from a brief blip in September 2020[^2] the two lines are basically on top of each other for their entire history. Then there's the impressive rise of `no repeating digits` starting in mid 2019, and continuing until the present.
+
+Below the top five threads we have 20 threads that are basically track each other, all growing at approximately the same rate. In this group, it's maybe interesting to note the growth of `age`, which wasn't started until mid-2019, and saw a big rise, before levelling off after the start of 2022. And then there's `time`, which made it to the very top of this group, before completely halting in late 2022.
+
+## Plotting the most popular side thread over time
+
+We can also look at which side thread is the most popular in any given 30 day period[^3], shown here below
+
+```{python}
+window = "30d"
+fig, ax = plt.subplots(1)
+one_hot = resampled.rolling(window).sum().idxmax(axis=1)
+mode = pd.get_dummies(one_hot).rename(known_threads.to_dict()["thread_name"], axis=1)
+mode = mode[[x for x in order if x in mode.columns]].rename(
+    {"no repeating digits": "no repeating"}, axis=1
+)
+mode.plot.area(ax=ax, color=sns.color_palette("colorblind"), lw=0)
+plt.legend(bbox_to_anchor=(1.00, 1.015))
+plt.ylim(0.1, 1)
+plt.tick_params(left=False, labelleft=False)
+ax.set_xlabel("Year")
+ax.tick_params(which='major', bottom=True)
+plt.show()
+```
+
+What I'd most like to draw your attention to with this plot is the four month stretch in 2021 when `ternary` was our most popular thread, and 25k counts were made in it. This is the only time `ternary` has ever been the most popular side thread, and the reason for the rapid rise is that somebody had decided to push the thread hard to reach an extra digit. Once that was accomplished, the activity declined to basically where it was before.
+
+I was originally going to include some deeper analysis of `tug of war` in this post as well, but cleaning up that data is going to take a lot longer than I thought, so that's all for now! If you have any suggestions for things you'd like to see me do with the side thread data, let me know!
+
+[^1]: I'll make a separate script that logs threads to this database later, but to start with I'll populate it with all the historical counts that [u/Countletics](https://reddit.com/user/Countletics) and [u/Antichess](https://reddit.com/user/Antichess) have been nice enough to provide.
+
+[^2]: Caused by counters who were unaware of the parity goal running a couple of threads
+
+[^3]: To be precise, we'll be looking at which of the **current top 25 threads** is the most popular at any time. So if a thread was popular once, but has since dropped out of the top 25 you won't find it here.
