@@ -31,6 +31,7 @@ from rcounting import analysis, counters, graph_tools, parsing
 from rcounting.models import submission_to_dict
 from rcounting.reddit_interface import reddit
 
+pio.templates.default = "seaborn"
 sns.set_theme()
 data_directory = Path(os.getenv("HOME")) / "Downloads" / "side_threads"
 side_threads_db = sqlite3.connect(
@@ -42,6 +43,7 @@ I'll start by loading in all the csv files to a single `DataFrame`, with an addi
 
 ```{python}
 # | eval: false
+# | cold-fold: show
 filenames = os.listdir(data_directory)
 filename = filenames[0]
 df = pd.concat(
@@ -66,6 +68,7 @@ I want to store more information about each submission than just the submission 
 
 ```{python}
 # | eval: false
+# | cold-fold: show
 submissions = reddit.info(fullnames=["t3_" + x for x in df["submission_id"].unique()])
 submissions = pd.DataFrame(
     [submission_to_dict(submission) for submission in submissions]
@@ -76,6 +79,7 @@ The final piece of information I need to write in the submissions table is which
 
 ```{python}
 # | eval: false
+# | cold-fold: show
 submissions = submissions.merge(
     pd.concat(
         [
@@ -96,6 +100,7 @@ And then I'll write the submissions table to the database.
 
 ```{python}
 # | eval: false
+# | cold-fold: show
 submissions.to_sql("submissions", side_threads_db, index=False, if_exists="replace")
 ```
 
@@ -105,14 +110,25 @@ In the future, this table could be populated with some more information, such as
 
 ```{python}
 # | eval: false
+# | cold-fold: show
 from rcounting.side_threads import known_thread_ids
-thread_names = df.groupby("thread")["submission_id"].first().reset_index().rename({"thread": "thread_name", "submission_id": "thread_id"}, axis=1)
+
+thread_names = (
+    df.groupby("thread")["submission_id"]
+    .first()
+    .reset_index()
+    .rename({"thread": "thread_name", "submission_id": "thread_id"}, axis=1)
+)
+
+
 def rename_thread(series):
     return (
         series["thread_name"]
         if series["thread_id"] not in known_thread_ids
         else known_thread_ids[series["thread_id"]]
     )
+
+
 thread_names["thread_name"] = thread_names.apply(rename_thread, axis=1)
 thread_names.to_sql("threads", side_threads_db, index=False, if_exists="replace")
 ```
@@ -134,7 +150,9 @@ comments = pd.read_sql(
     side_threads_db,
 )
 comments["username"] = comments["username"].apply(counters.apply_alias)
-known_threads = pd.read_sql("select * from threads", side_threads_db).set_index("thread_id")
+known_threads = pd.read_sql("select * from threads", side_threads_db).set_index(
+    "thread_id"
+)
 ```
 
 In the thread directory, we treat the top 25 threads specially, and so I'll focus this analysis on those threads. This also helps make the plots slightly less crowded.
@@ -168,17 +186,17 @@ cumulative = (
     .melt(ignore_index=False)
     .reset_index()
 )
-mapping = {"timestamp": "Date", "variable": "Side Thread", "value": "Total Counts"}
 order = list(
     cumulative.groupby("variable")["value"].last().sort_values(ascending=False).index
 )
 fig = px.line(
-    data_frame=cumulative.rename(mapping, axis=1),
-    x="Date",
-    y="Total Counts",
-    line_group="Side Thread",
-    color="Side Thread",
-    category_orders={"Side Thread": order},
+    data_frame=cumulative,
+    x="timestamp",
+    y="value",
+    line_group="variable",
+    color="variable",
+    category_orders={"variable": order},
+    labels={"timestamp": "Date", "variable": "Side Thread", "value": "Total Counts"},
 )
 fig.show()
 ```
@@ -229,19 +247,19 @@ We can also look at which side thread is the most popular in any given 30 day pe
 
 ```{python}
 window = "30d"
-fig, ax = plt.subplots(1)
 one_hot = resampled.rolling(window).sum().idxmax(axis=1)
 mode = pd.get_dummies(one_hot).rename(known_threads.to_dict()["thread_name"], axis=1)
 mode = mode[[x for x in order if x in mode.columns]].rename(
     {"no repeating digits": "no repeating"}, axis=1
 )
-mode.plot.area(ax=ax, color=sns.color_palette("colorblind"), lw=0)
-plt.legend(bbox_to_anchor=(1.00, 1.015))
-plt.ylim(0.1, 1)
-plt.tick_params(left=False, labelleft=False)
-ax.set_xlabel("Year")
-ax.tick_params(which='major', bottom=True)
-plt.show()
+labels = {"timestamp": "Date", "variable": "Side thread"}
+palette = sns.color_palette("colorblind", len(mode.columns))
+colors = [f"rgba{tuple(256*np.array(x)) +(255,)}" for x in palette]
+fig = px.area(mode, color_discrete_sequence=colors, labels=labels)
+fig.update_yaxes(range=[0, 1], visible=False, showticklabels=False)
+fig.update_traces(line=dict(width=0), opacity=1)
+fig.for_each_trace(lambda trace: trace.update(opacity=1))
+fig.show()
 ```
 
 What I'd most like to draw your attention to with this plot is the four month stretch in 2021 when `ternary` was our most popular thread, and 25k counts were made in it. This is the only time `ternary` has ever been the most popular side thread, and the reason for the rapid rise is that somebody had decided to push the thread hard to reach an extra digit. Once that was accomplished, the activity declined to basically where it was before.
