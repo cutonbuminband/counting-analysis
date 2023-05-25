@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import plotly.io as pio
 import seaborn as sns
 from IPython.display import Markdown
@@ -142,6 +143,8 @@ The first and most obvious thing to do with the side thread data is to plot a ch
 I'll pretend that I didn't just create the side threads database, so I'll start by loading in some comments:
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to query the database and load the side thread comments"
 comments = pd.read_sql(
     "SELECT comments.timestamp, submissions.thread_id, comments.username "
     "FROM comments JOIN submissions "
@@ -157,9 +160,11 @@ known_threads = pd.read_sql("select * from threads", side_threads_db).set_index(
 
 In the thread directory, we treat the top 25 threads specially, and so I'll focus this analysis on those threads. This also helps make the plots slightly less crowded.
 
-I'll use a `groupby` and a `size` to get the total number of counts in each thread, and use that to find the top 25 threads. Then I select only the comments in those threads, and get a 12 hour rolling count of how many comments were made in each side thread.
+I'll use a `groupby` and a `size` to get the total number of counts in each thread, and use that to find the top 25 threads. Then I select only the comments in those threads, and get a 12 hour resampled count of how many comments were made in each side thread.
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to calculate how many counts were made in each side thread in 12 hour periods"
 top_threads = (
     comments.groupby("thread_id")
     .size()
@@ -178,6 +183,8 @@ resampled = pd.get_dummies(subset.sort_index()).resample(frequency).sum()
 From there it's just a short hop and a skip to the chart I described. As teased earlier, the chart is interactive and you can pan and zoom as you like. You can also highlight specific threads by double clicking the legend.
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to plot the cumulative side thread counts"
 # | column: body-outset
 cumulative = (
     resampled.expanding()
@@ -210,6 +217,8 @@ Below the top five threads we have 20 threads that are basically track each othe
 We can use basically the same approach to find and plot the top side thread counters over time,
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to plot the hall of side threads"
 #| column: body-outset
 counts = comments.groupby("username").size().sort_values(ascending=False)
 top_counters = [x for x in counts.index if not counters.is_banned_counter(x)][:25]
@@ -246,19 +255,32 @@ It's also fun to see how many of our counters have wildly varying rates of side 
 We can also look at which side thread is the most popular in any given 30 day period[^3], shown here below
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to plot the most popular side thread"
+# | column: body-outset
+
 window = "30d"
 one_hot = resampled.rolling(window).sum().idxmax(axis=1)
 mode = pd.get_dummies(one_hot).rename(known_threads.to_dict()["thread_name"], axis=1)
-mode = mode[[x for x in order if x in mode.columns]].rename(
-    {"no repeating digits": "no repeating"}, axis=1
-)
+mode = mode[[x for x in order if x in mode.columns]]
 labels = {"timestamp": "Date", "variable": "Side thread"}
 palette = sns.color_palette("colorblind", len(mode.columns))
-colors = [f"rgba{tuple(256*np.array(x)) +(255,)}" for x in palette]
-fig = px.area(mode, color_discrete_sequence=colors, labels=labels)
+colors = [f"rgb{tuple(256*np.array(x))}" for x in palette]
+
+fig = go.Figure()
+for column, color in zip(mode.columns, colors):
+    fig.add_trace(
+        go.Scatter(
+            x=mode.index,
+            y=mode[column],
+            fill="tozeroy",
+            mode="none",
+            fillcolor=color,
+            name=column,
+            hoveron="points+fills",
+        )
+    )
 fig.update_yaxes(range=[0, 1], visible=False, showticklabels=False)
-fig.update_traces(line=dict(width=0), opacity=1)
-fig.for_each_trace(lambda trace: trace.update(opacity=1))
 fig.show()
 ```
 
