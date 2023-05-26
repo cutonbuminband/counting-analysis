@@ -36,7 +36,8 @@ db = sqlite3.connect(data_directory / "counting.sqlite")
 Then we load some data, both the counts and the gets. We convert the timestamp to a date column, and add a "replying to" column, since some of what we'll be doing later needs it.
 
 ```{python}
-#| code-summary: "Code for loading counts from the counting database"
+# | code-fold: true
+# | code-summary: "Code for loading counts from the counting database"
 counts = pd.read_sql(
     "select comments.username, comments.submission_id, comments.timestamp "
     "from comments join submissions "
@@ -59,6 +60,8 @@ gets.loc[[0, 1], ["basecount"]] = [0, 16691]
 
 A first bit of analysis is to visualize the progress of r/counting over time. That isn't particularly difficult to do
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to plot the cumulativa counts over time"
 # | label: fig-progress
 # | fig-cap: Cumulative counts made on /r/counting as a function of time
 data = gets.set_index("date")
@@ -77,6 +80,8 @@ We can split the total counts into different groups according to who made them, 
 
 ```{python}
 # | column: body-outset
+# | code-fold: true
+# | code-summary: "Code to plot the hall of counters"
 frequency = "24h"
 totals = counts.groupby("username").size().sort_values(ascending=False)
 top_counters = [x for x in totals.index if not counters.is_banned_counter(x)][:25]
@@ -112,6 +117,8 @@ We can try plotting thread participation vs total counts. The expectation is tha
 We start extract the number of counts and the threads participated in, using the groupby functionality of `pandas`, and tthen we'll make a scatter plot of how the two quantities are related. Since the most prolific counters have orders of magnitude more counts and k parts than the least prolific counters, we'll show both axes on a log scale.
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to plot total counts vs k parts"
 # | label: fig-parts-counts
 # | fig-cap: The relationship between the total number of counts for each user, and then number of threads they've participated in
 groups = counts.groupby("username")["submission_id"]
@@ -143,6 +150,8 @@ As with the number of counts vs threads participated in, we can expect that diff
 To quantify how uneven the counting distribution is we can look at the [effective number of partners](https://en.wikipedia.org/wiki/Effective_number_of_parties) of each counter, and compare with the actual number of partners.
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to find the effective and actual number of counting partners"
 sorted_counters = counts.groupby("username").size().sort_values(ascending=False)
 top_counters = [
     x for x in sorted_counters.index[:35] if not counters.is_banned_counter(x)
@@ -169,6 +178,8 @@ combined.head(25)
 
 We can also get the replying-to and replied-by stats for a single user
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to calculate reply stats for a single user"
 # | label: tbl-replying
 # | tbl-cap: The most popular counting partners of a single user
 counter = "thephilsblogbar2"
@@ -190,6 +201,8 @@ Markdown(result.head(10).to_markdown(headers=headers))
 # Oldest counters
 We can see who the oldest still-active counters are, where still-active is generously defined as "having made a count within the last six months".
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to find the oldest still-active counters"
 # | label: tbl-oldest-counters
 # | tbl-cap: The 25 currently-active counters who've been counting for the longest time
 cutoff_date = pd.to_datetime("today") - pd.Timedelta("180d")
@@ -210,6 +223,8 @@ Markdown(oldest_counters.apply(lambda x: x.dt.date).to_markdown(headers=headers)
 Similarly to the oldest counters, we can see what the longest difference between a counter's first and last get is, and that's shown on @tbl-get-delta. Some counters have been active and getting gets for quite a while!
 
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to find the counters with the longest get spans"
 # | label: tbl-get-delta
 # | tbl-cap: The longest differences between the first and last get of r/counting users (1000s of counts)
 Markdown(
@@ -225,6 +240,8 @@ Markdown(
 
 We can also calculate what the longest get streaks are.
 ```{python}
+# | code-fold: true
+# | code-summary: "Code to find the longest get streaks"
 # | label: tbl-streaks
 # | tbl-cap: The longest streak
 y = gets["username"]
