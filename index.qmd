@@ -270,7 +270,7 @@ def old_link(row):
 def new_link(row):
     return (
         f"[{int(row.basecount_new / 1000) + 1}K]"
-        + f"(https://reddit.com/comments/{row.submission_id_new}/)",
+        + f"(https://reddit.com/comments/{row.submission_id_new}/)"
     )
 
 
