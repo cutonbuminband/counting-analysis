@@ -74,7 +74,10 @@ data.sort_index(inplace=True)
 
 Once we have the data, we can get a 14-day rolling average, and resample the points to nice 6h intervals. The resampling makes plotting with pandas look nicer, since it can more easily deal with the x-axis.
 ```{python}
+# | code-fold: true
+# | code-summary: "Code for plotting the separator data"
 # | column: body-outset
+
 resampled = (
     (data[["commas", "spaces", "no separator"]].rolling("14d").mean() * 100)
     .resample("6h")
@@ -97,6 +100,7 @@ fig = px.line(
     title="The separators used on r/counting over time"
 )
 
+fig.update_yaxes(range=[0, 100])
 fig.show()
 ```
 
