@@ -7,23 +7,28 @@ Reddit helpfully provides us with time stamps for each comment, so we know exact
 We'll start off with some code to import the relevant packages and load the data
 
 ```{python}
-#| code-fold: true
-#| code-summary: "Code for importing packages and loading data"
-from pathlib import Path
-import pandas as pd
+# | code-fold: true
+# | code-summary: "Code for importing packages and loading data"
+import itertools
+import os
 import sqlite3
+from pathlib import Path
+
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
 import scipy
-from rcounting import counters, analysis, graph_tools, units
-import seaborn as sns
-sns.set_theme()
 from IPython.display import Markdown
-data_directory = Path("../data")
-import networkx as nx
-import itertools
+from plotly.subplots import make_subplots
+from rcounting import analysis, counters, units
 
-db = sqlite3.connect(data_directory / "counting.sqlite")
+pio.templates.default = "seaborn"
+
+db = sqlite3.connect(Path(os.getenv("COUNTING_DATA")) / "counting.sqlite")
 counts = pd.read_sql("select username, timestamp from comments order by timestamp", db)
 counts["username"] = counts["username"].apply(counters.apply_alias)
 ```
@@ -31,27 +36,30 @@ counts["username"] = counts["username"].apply(counters.apply_alias)
 The first thing we'll look at is how the average rate of counts varies throughout the day. That's shown on @fig-kde.
 
 ```{python}
-#| label: fig-kde
-#| fig-cap: The average rate of counts at different times of day. The horizontal line shows the global average.
+# | label: fig-kde
+# | fig-cap: The average rate of counts at different times of day. The horizontal line shows the global average.
+# | code-fold: true
+# | code-summary: "Code to plot the counting rate as a function of the time of day"
 offset = 5 * units.HOUR
-fig, ax = plt.subplots(1)
 nbins = int(units.DAY / 30)
-counts['time'] = (counts['timestamp'] - offset) % units.DAY
-dt = counts['timestamp'].iat[-1] - counts['timestamp'].iat[0]
+counts["time"] = (counts["timestamp"] - offset) % units.DAY
+dt = counts["timestamp"].iat[-1] - counts["timestamp"].iat[0]
 avg_counts_per_day = len(counts) / dt * units.DAY
-x, kde = analysis.fft_kde(counts['time'], nbins, kernel="normal_distribution", sigma=0.01)
+x, kde = analysis.fft_kde(
+    counts["time"], nbins, kernel="normal_distribution", sigma=0.01
+)
 kde = kde * avg_counts_per_day * units.MINUTE
-ax.fill_between(x, kde, alpha=0.8)
-ax.axhline(len(counts) / dt * units.MINUTE, color="0.7", linestyle="--")
-ticks, labels = zip(*[(x * units.HOUR, f"{x:02d}:00") for x in range(0, 25, 3)])
-def prettify(ax):
-    ax.set_xlim(0, units.DAY + 1)
-    ax.set_xticks(ticks)
-    ax.set_xticklabels(labels)
-    ax.set_ylim(bottom=0)
-    ax.set_xlabel("Time of day (UTC - 5)")
-ax.set_ylabel("Average rate [counts/minute]")
-prettify(ax)
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(x=pd.to_datetime(x, unit="s"), y=kde, fill="tozeroy", mode="lines")
+)
+fig.add_hline(
+    y=kde.mean(), line_dash="dash", line_width=2, line_color="hsl(0, 0%, 30%)"
+)
+fig.update_xaxes(tickformat="%H:%M", title="Time of day (UTC-5)")
+fig.update_yaxes(title="Average rate (counts/minute)")
+fig.show()
+
 
 ```
 
@@ -66,32 +74,57 @@ print(f"{np.sqrt(kde.var()) / kde.mean() * 100:.1f}%.")
 It's of course also possible to calculate this variation for individual counters, and not just for all counters together. The counters in the top 30 with most and least variation are shown on @tbl-variation.
 
 ```{python}
-#| label: tbl-variation
-#| tbl-cap: The most and least regular counters
+# | label: tbl-variation
+# | tbl-cap: The most and least regular counters
+# | code-fold: true
+# | code-summary: "Code to make a table of the counters in the top 30 HoC with the most and least daily variation in their counting rate"
 def get_tod_variation(group):
-    x, kde = analysis.fft_kde(group['time'], nbins, kernel="normal_distribution", sigma=0.01)
+    x, kde = analysis.fft_kde(
+        group["time"], nbins, kernel="normal_distribution", sigma=0.01
+    )
     return np.sqrt(kde.var()) / kde.mean()
+
 
 top_counters = counts.groupby("username").size().sort_values(ascending=False).index
 top_counters = [x for x in top_counters if not counters.is_banned_counter(x)][:30]
 top_30 = counts.query("username in @top_counters")
 tod_variations = top_30.groupby("username").apply(get_tod_variation).sort_values()
 head = pd.concat([tod_variations.head(3), tod_variations.tail(3)]) * 100
-combined = head.to_frame("variation").join(pd.DataFrame(top_counters).reset_index().set_index(0))
-Markdown(combined.to_markdown(headers=["**Counter**", "**Time of day variation**", "**HOC position**"], floatfmt=".0f"))
+combined = head.to_frame("variation").join(
+    pd.DataFrame(top_counters).reset_index().set_index(0)
+)
+headers = ["**Counter**", "**Time of day variation**", "**HOC position**"]
+Markdown(combined.to_markdown(headers=headers, floatfmt=".0f"))
 ```
 
 As an aside, you should notice that even the most regular counter has a variation that is higher than the overall variation. Intuitively that makes sense - it's harder for one person to evenly cover all 24 hours of the day than it is for all counters together. We can focus on the single least and most regular counters and look at how their counting rates have varied throughout the day. Here's a plot of that:
 
 ```{python}
-fig, ax = plt.subplots()
+# | code-fold: true
+# | code-summary: "Code to plot the counters with the largest and smallest time of day variation"
+fig = go.Figure()
 for index in [0, -1]:
     username = tod_variations.index[index]
-    x, kde = analysis.fft_kde(counts.query("username == @username")['time'], nbins, kernel="normal_distribution", sigma=0.01)
-    ax.plot(x, kde / kde.mean(), label=username)
-ax.legend()
-ax.set_ylabel("Normalized counting rate")
-prettify(ax)
+    x, kde = analysis.fft_kde(
+        counts.query("username == @username")["time"],
+        nbins,
+        kernel="normal_distribution",
+        sigma=0.01,
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=pd.to_datetime(x, unit="s"),
+            y=kde / kde.mean(),
+            mode="lines",
+            name=username,
+        )
+    )
+
+fig.update_xaxes(tickformat="%H:%M", title="Time of day (UTC-5)")
+fig.update_yaxes(title="Density")
+fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+fig.show()
 ```
 
 It's not too surprising, but those distributions look very different!
@@ -102,38 +135,68 @@ The previous section provided one view into the activity on r/counting and how i
 
 To see if (and how) the distributions of counts have changed over time it would in principle be possible to make a plot like @fig-kde for each year or month of activity on r/counting, and then compare them. Alternatively, we could add a third axis to the plot and make a single three-dimensional plot, which might show what we want. I always find those really difficult to read, so that doesn't seem too appealing. On the other hand, if it were possible to show a single distribution in just one dimension instead of two, then we could put lots of those next to each other and build up a two-dimensional plot.
 
-What I'll do is split the timestamp of each count into a day component and a **time of day** component, and then plot the day on the x axis and the time of day on the y axis. This is done on figure @fig-hexbin in the form of a hexbin plot: the darker the colour of each hexagon, the more counts were made on that date and at that time of day.
+What I'll do is split the timestamp of each count into a day component and a **time of day** component, and then plot the day on the x axis and the time of day on the y axis. This is done on figure @fig-jointplot in the form of a 2d histogram plot: the darker the colour of each rectangle, the more counts were made on that date and at that time of day.
 
 ```{python}
-#| label: fig-hexbin
-#| fig-cap: An illustration of every count made on the main thread; the darker the colour of any particular hexagon, the more counts were made in the area it covers.
-sns.set_theme(style="ticks")
-import matplotlib.dates as mdates
-counts['date'] = pd.to_datetime(counts['timestamp'], unit='s')
-counts['numerical_date'] = mdates.date2num(counts['date'])
-counts['flipped_time'] = units.DAY - counts['time']
-grid = sns.jointplot(x='numerical_date',
-                     y='flipped_time',
-                     kind="hex",
-                     data=counts,)
-grid.set_axis_labels()
-ax = grid.ax_joint
-def prettify_timeseries(ax):
-    ax.xaxis_date()
-    locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax.xaxis.set_major_locator(locator)
-    ax.xaxis.set_major_formatter(formatter)
-    ax.set_xlim([counts['numerical_date'].min(), counts['numerical_date'].max()])
-    ax.set_yticks(units.DAY - np.array(ticks))
-    ax.set_yticklabels(labels)
-    ax.set_ylim([0, units.DAY])
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Time of Day (UTC - 5)")
-prettify_timeseries(ax)
+# | column: page
+# | label: fig-jointplot
+# | fig-cap: "An illustration of every count made on the main thread; the darker the colour of any particular tile, the more counts were made in the area it covers."
+# | code-fold: true
+# | code-summary: "Code to plot the daily counting pattern for every count on main"
+counts["date"] = pd.to_datetime(counts["timestamp"], unit="s")
+counts["time_date"] = pd.to_datetime(counts["time"], unit="s")
+
+x_grouper = pd.Grouper(freq="5d", key="date")
+y_grouper = pd.Grouper(freq="10min", key="time_date")
+
+panel = counts.groupby([x_grouper, y_grouper]).size().unstack(level=0).fillna(0)
+labels = {"x": "Date", "y": "Time of Day (UTC-5)", "color": "Counts"}
+fig = make_subplots(
+    rows=2,
+    cols=2,
+    vertical_spacing=0.03,
+    horizontal_spacing=0.02,
+    shared_xaxes=True,
+    shared_yaxes=True,
+    row_heights=[1, 3],
+    column_widths=[4, 1],
+)
+
+color = pio.templates[pio.templates.default].layout.colorway[0]
+top_hist = go.Scatter(
+    x=panel.columns,
+    y=panel.sum(axis=0),
+    mode="lines",
+    fill="tozeroy",
+    line={"color": color},
+)
+
+side_hist = go.Scatter(
+    y=panel.index,
+    x=panel.sum(axis=1),
+    mode="lines",
+    fill="tozerox",
+    line={"color": color},
+)
+heatmap = go.Heatmap(
+    x=panel.columns,
+    y=panel.index,
+    z=panel.values,
+    colorscale=px.colors.sequential.BuPu,
+    zmin=0,
+    zmax=800,
+)
+
+fig.add_trace(top_hist, row=1, col=1)
+fig.add_trace(heatmap, row=2, col=1)
+fig.add_trace(side_hist, row=2, col=2)
+fig.update_yaxes(autorange="reversed", tickformat="%H:%M", row=2)
+fig.update_traces(showscale=False, row=2, col=1)
+fig.update(layout_showlegend=False)
+fig.show()
 ```
 
-The plot is a bit difficult to follow, and that's kind of the point – it's trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; that's basically the same as what's plotted in @fig-kde, but stretched out a bit. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate was high, but gradually falling to a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with two important peaks.
+The plot is a bit difficult to follow, and that's kind of the point – it's trying to cram a lot of data into not very many pixels. On the right, you can see the global time of day distribution; that's basically the same as what's plotted in @fig-kde. On top, you can see the overall counting rate which is very spiky. You can see how the rate was basically zero in 2012; and then was higher but still low until late 2015 where it shot up. In 2016 and 2017 the rate was high, but gradually falling to a minimum in late 2017, followed by an increase to very high levels in late 2019. Since then, the rate has generally been much lower, but with some important peaks.
 
 Turning to the joint plot, it tries to show both of these things at the same time. It's illustrative perhaps to compare the counting activity in early 2016 with that in early 2020. The top histogram shows that the counting rates at these two times was roughly similar, but the main chart reveals that how these counts took place was very different. In 2016, the counting activity was spread out throughout the day, with a small dip between 04:00 and 07:00. In 2020, there was a pronounced peak of activity between 13:00 and 19:00, a smaller peak centered at 04:00 and much less activity throughout the rest of the day.
 
@@ -168,21 +231,33 @@ That seems reasonable - it's inside the broad afternoon peak of activity, but sl
 With the summary statistic in hand, we can plot how the mean time of day of counts has varied over time
 
 ```{python}
-counts.set_index('date', inplace=True)
-counts['x'] = np.cos(counts['time'] / units.DAY * 2 * np.pi)
-counts['y'] = np.sin(counts['time'] / units.DAY * 2 * np.pi)
-rolling = counts[['x', 'y', 'numerical_date']].rolling('28d').mean()
-rolling['time_of_day'] = (np.arctan2(rolling['y'], rolling['x']) * units.DAY / 2 / np.pi) % units.DAY
-rolling = rolling.resample('7d').mean()
-```
+# | code-fold: true
+# | code-summary: "Code to plot the average counting time over the years"
+counts["x"] = np.cos(counts["time"] / units.DAY * 2 * np.pi)
+counts["y"] = np.sin(counts["time"] / units.DAY * 2 * np.pi)
+rolling = counts[["x", "y", "date"]].rolling("28d", on="date").mean()
+rolling["time_of_day"] = (
+    np.arctan2(rolling["y"], rolling["x"]) * units.DAY / 2 / np.pi
+) % units.DAY
+rolling = rolling.resample("7d", on="date").mean()
+rolling["tod"] = pd.to_datetime(rolling["time_of_day"], unit="s")
+labels = {"date": "Date", "tod": "Time of Day (UTC-5)"}
+fig = px.scatter(data_frame=rolling.reset_index(), x="date", y="tod", labels=labels)
 
-```{python}
-sns.set_theme()
-fig, ax = plt.subplots()
-rolling["seconds_to_midnight"] = units.DAY - rolling["time_of_day"]
-ax = sns.regplot(x="numerical_date", y="seconds_to_midnight", data=rolling)
-prettify_timeseries(ax)
-
+rolling["numerical_date"] = mdates.date2num(rolling.index)
+model = np.poly1d(np.polyfit(rolling["numerical_date"], rolling["time_of_day"], 1))
+restricted = rolling.iloc[[0, -1], :]
+fig.add_trace(
+    go.Scatter(
+        x=pd.to_datetime(restricted.index),
+        y=pd.to_datetime(model(restricted["numerical_date"]), unit="s"),
+        mode="lines",
+        line_color="hsl(0, 0%, 30%)",
+    )
+)
+fig.update_yaxes(autorange="reversed", tickformat="%H:%M")
+fig.update_layout(showlegend=False)
+fig.show()
 ```
 
 This analysis shows that from the start of r/counting until 2023, the average time of day of each count has drifted by about six hours. More precisely, we can say that
@@ -191,6 +266,6 @@ This analysis shows that from the start of r/counting until 2023, the average ti
 Markdown(f"the average time has shifted by {np.polyfit(rolling['numerical_date'], rolling['time_of_day'], 1)[0]:.1f} seconds per day.")
 ```
 
-This shift is not something that was at all apparent from @fig-hexbin, which shows the value of the summary statistic for revealing trends in the data.
+This shift is not something that was at all apparent from @fig-jointplot, which shows the value of the summary statistic for revealing trends in the data.
 
 [^1]: I spent 5 minutes playing with $L^2$ norms before I realised I was reinventing the wheel
