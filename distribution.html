@@ -283,7 +283,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>100% Completion</h1>
 <p>A natural place to start is to look at how many counters have counted every number from 1 to 1000. For this (and most of the other stats in this page) I’ll be restricting my attention to people who have made at least 1000 counts.</p>
 <div class="cell" data-execution_count="2">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>totals <span class="op">=</span> counts.groupby(<span class="st">"username"</span>).size()</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>usernames <span class="op">=</span> [x <span class="cf">for</span> x <span class="kw">in</span> totals[totals <span class="op">&gt;=</span> <span class="dv">1000</span>].index <span class="cf">if</span> <span class="kw">not</span> counters.is_banned_counter(x)]</span>
@@ -298,7 +298,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>We can drill a little deeper and ask how quickly each counter reached the full set. In theory it’s possible to do that after only 1000 counts, but in practice it’s extremely unlikely. Indeed, <a href="#tbl-complete">Table&nbsp;1</a> shows that even the fastest counters needed multiple times that.</p>
 <div class="cell" data-execution_count="3">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>completists <span class="op">=</span> [username <span class="cf">for</span> username <span class="kw">in</span> usernames <span class="cf">if</span> missing_values[username] <span class="op">==</span> <span class="dv">0</span>]</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>complete <span class="op">=</span> subset.query(<span class="st">"username in @completists"</span>).copy()</span>
@@ -370,7 +370,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>Similarly, we can take a look at which counters are only missing a few values before they have the full set:</p>
 <div class="cell" data-execution_count="4">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>missing <span class="op">=</span> [username <span class="cf">for</span> username <span class="kw">in</span> usernames <span class="cf">if</span> <span class="dv">0</span> <span class="op">&lt;</span> missing_values[username] <span class="op">&lt;=</span> <span class="dv">5</span>]</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> (subset</span>
@@ -457,7 +457,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>The counts on r/counting are organised in threads of 1000 counts, and getting the last count on a thread is a bit of a prize. Some counters are very motivated by gets, and some counters are less motivated by them, but everyone is aware of them.</p>
 <p>On average, everyone should have made 1000 counts for each get they have, but some counters have ratios that are significantly different from that. We can look at which counters have made the fewest total counts but still managed to obtain a get</p>
 <div class="cell" data-execution_count="5">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>getters <span class="op">=</span> counts.groupby(<span class="st">"submission_id"</span>).last()</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>gets <span class="op">=</span> getters.reset_index()[<span class="st">'username'</span>].value_counts()</span>
@@ -509,7 +509,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>Looking at this list, <code class="verbatim">thephilsnipebar</code> and <code class="verbatim">Ralph_Schaosid</code> are immediately obvious as counting alts. <code class="verbatim">MeNowDealWithIt</code> has made significantly more than one count, but deleted their account before they were picked up by the script, so I have no idea how many. <code class="verbatim">Hotshot2k4</code> seems legit. They made three counts, the first of which was the 54k get. More recently, <code class="verbatim">ItzTaken</code> got a <a href="http://reddit.com/r/counting/comments/mlqtr1/_/gtobrvf?context=3">free get</a> that <code class="verbatim">VitaminB16</code> left in the 4195k thread. Before that they had made two counts in the 2M era.</p>
 <div class="cell" data-execution_count="6">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>lt_100 <span class="op">=</span> (totals[<span class="st">"counts"</span>] <span class="op">&lt;</span> <span class="dv">100</span>).<span class="bu">sum</span>()</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>lt_1000 <span class="op">=</span> (totals[<span class="st">"counts"</span>] <span class="op">&lt;</span> <span class="dv">1000</span>).<span class="bu">sum</span>()</span>
@@ -525,7 +525,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>Maybe it’s better instead to look only at counters who have made at least 1000 counts. The relevant comparison would then be the ratio of counts to gets. That’s shown on <a href="#tbl-ratio">Table&nbsp;2</a>, and veterans of r/counting will recognise some of the first five names as counters who like to try and snipe the get.</p>
 <div class="cell" data-execution_count="7">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>totals <span class="op">=</span> totals.loc[totals[<span class="st">"counts"</span>] <span class="op">&gt;=</span> <span class="dv">1000</span>].copy()</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>totals[<span class="st">"ratio"</span>] <span class="op">=</span> totals[<span class="st">"counts"</span>] <span class="op">/</span> totals[<span class="st">"gets"</span>]</span>
@@ -616,7 +616,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>The Overall Counting Distribution</h1>
 <p>I promised to write about a distribution of counts, and so far I’ve mainly written about what numbers individual counters have or have not counted. And there hasn’t been a single graph yet! But I promise that’s about to change. A fun thing to look at first is how many people have counted each number from 1 to 1000. It wouldn’t be far-fetched to assume that each number had been counted by roughly the same amount of people, but that’s not at all what happens. <a href="#fig-distribution">Figure&nbsp;1</a> has the details.</p>
 <div class="cell" data-execution_count="8">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>aggregated <span class="op">=</span> counts.groupby(<span class="st">"position"</span>)[<span class="st">"username"</span>].nunique()</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> aggregated.iloc[<span class="dv">0</span>:<span class="dv">1000</span>].plot(ylabel<span class="op">=</span><span class="st">"Number of different counters"</span>, xlabel<span class="op">=</span><span class="st">"Thread position"</span>)</span>
@@ -634,7 +634,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>We can also look at the counting distributions for individual counters. Again, the default assumption would be that everybody has counted each number roughly the same number of times. Not too surprisingly, we see that this assumption holds better for some counters than it does for others. <a href="#fig-regularity">Figure&nbsp;2</a> shows the counting distributions for the most and least regular counter, and you can really see the difference between the two.</p>
 <p>The graph has been split into odds and evens, because there’s generally a consistent difference between those two series. Intuitively, that makes sense, since most counts are made in runs where a given user makes every second counts. It’s therefore not too strange that the behaviour at a value <span class="math inline">\(n\)</span> is more similar to that at <span class="math inline">\(n - 2\)</span> than at <span class="math inline">\(n - 1\)</span>.</p>
 <div class="cell" data-execution_count="9">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>grouped <span class="op">=</span> complete[[<span class="st">'username'</span>, <span class="st">'position'</span>]].value_counts()</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>cov <span class="op">=</span> grouped.groupby(level<span class="op">=</span><span class="dv">0</span>).agg(<span class="kw">lambda</span> x: np.std(x) <span class="op">/</span> np.mean(x)).sort_values()</span>
@@ -658,7 +658,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>We can quantify the difference for each counter through the <a href="https://en.wikipedia.org/wiki/Coefficient_of_variation">Coefficient of Variation</a>, which expresses how far their counting distribution is from uniform. Here’s a table of the five most and five least regular counters:</p>
 <div class="cell" data-execution_count="10">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>Markdown(pd.concat([<span class="dv">100</span><span class="op">*</span>cov.head(), <span class="dv">100</span><span class="op">*</span>cov.tail()])</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>         .to_markdown(headers<span class="op">=</span>[<span class="st">"**Username**"</span>, <span class="st">"**Coefficient of Variation [%]**"</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -718,7 +718,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>Of course, we saw from <a href="#fig-distribution">Figure&nbsp;1</a> that there’s a significant variation in how many people have counted each number, so perhaps the uniform distribution is a bad model for how often we should expect each counter to have counted a particular number. Indeed, since twice as many people have counted the number 50 as have counted 1000, then <strong>on average</strong> people who have counted 1000 have done so twice as often as people who have counted 50. That leads to a model distribution that goes as <span class="math inline">\(f(n) \propto \frac{1}{\textrm{number of people who have counted n}}\)</span>. We can again look through all the counters and see who has a counting distribution closest to this ideal:</p>
 <div class="cell" data-execution_count="11">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>distribution <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> aggregated.iloc[<span class="dv">0</span>:<span class="dv">1000</span>]</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>distribution <span class="op">=</span> distribution <span class="op">/</span> distribution.mean()</span>
@@ -757,7 +757,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>In the previous section we saw that for some counters, there’s a significant difference between how they’ve counted the odd numbers, and how they’ve counted the even numbers. The difference is not unexpected, since the nature of counting means that for any given run you’ll be stuck on either the odd numbers or the even numbers.</p>
 <p>It is striking though just how large the difference can be for some counters, so here’s a table of the most odd counters, the most even counters and the most balanced counters:</p>
 <div class="cell" data-execution_count="12">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">"is_even"</span>] <span class="op">=</span> (counts[<span class="st">"position"</span>] <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>offsets <span class="op">=</span> [<span class="st">"1gm10t"</span>, <span class="st">"7hn2tm"</span>, <span class="st">"b471wg"</span>, <span class="st">"bz6r0g"</span>, <span class="st">"d6pgni"</span>, <span class="st">"ebnh39"</span>, <span class="st">"grggc0"</span>, <span class="st">"oj50hj"</span>, <span class="st">"ob4a2h"</span>, <span class="st">"t81gug"</span>]</span>

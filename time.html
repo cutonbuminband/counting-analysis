@@ -359,7 +359,7 @@ if (outputEl) {{
 <p>You can see that the counting rate varies quite a bit - the most popular time (early afternoon EST) has an average counting rate that’s almost four times higher than the least popular time (late night/early morning EST). It’s also nice to have a feeling for what a “normal” rate of counting has been, and it turns that it’s on the order of <strong>one count per minute</strong>.</p>
 <div class="page-columns page-full"><p>If the rate of counting were perfectly uniform, the chart would be perfectly flat. If every count was always made at precisely 12:00 there would be an infinitely tall spike right at the middle of the graph, and the rate would be zero at all other times. It would be nice to be able to quantify just how far away the distribution is from uniform. Some statisticians have come up with the <a href="https://en.wikipedia.org/wiki/Coefficient_of_variation">Coefficient of Variation</a> to do precisely that<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>; it says that the variation of a sample of values can be expressed as the ratio of the standard deviation to the mean. If we do this for our time of day data, we obtain</p><div class="no-row-height column-margin column-container"><li id="fn1"><p><sup>1</sup>&nbsp;I spent 5 minutes playing with <span class="math inline">\(L^2\)</span> norms before I realised I was reinventing the wheel</p></li></div></div>
 <div class="cell" data-execution_count="3">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>np<span class="sc">.</span>sqrt(kde.var()) <span class="op">/</span> kde<span class="sc">.</span>mean() <span class="op">*</span> <span class="dv">100</span><span class="sc">:.1f}</span><span class="ss">%."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
@@ -602,7 +602,7 @@ if (outputEl) {{
 <p>What we can use instead is the <a href="https://en.wikipedia.org/wiki/Circular_mean">circular mean</a>. You can imagine this as pretending we have a 24h analog clock, and each event is an arrow points to its correct time. The arrow tail is at (0, 0), and the arrow head is at position (x, y), corresponding to whatever time it is. What we want to do is to find the average angle of all the arrows, and to do that we average all the x positions separately, and all the y positions separately, and create a new arrow that points to (average x, average y). The angle we want is then the angle of this arrow.</p>
 <p>We can do that for the overall counting distribution to obtain</p>
 <div class="cell" data-execution_count="7">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>mean <span class="op">=</span> scipy.stats.circmean(counts[<span class="st">'time'</span>], high<span class="op">=</span>units.DAY)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>hour, rem <span class="op">=</span> <span class="bu">divmod</span>(mean, <span class="dv">3600</span>)</span>
@@ -675,7 +675,7 @@ if (outputEl) {{
 </div>
 <p>This analysis shows that from the start of r/counting until 2023, the average time of day of each count has drifted by about six hours. More precisely, we can say that</p>
 <div class="cell" data-execution_count="9">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>Markdown(<span class="ss">f"the average time has shifted by </span><span class="sc">{</span>np<span class="sc">.</span>polyfit(rolling[<span class="st">'numerical_date'</span>], rolling[<span class="st">'time_of_day'</span>], <span class="dv">1</span>)[<span class="dv">0</span>]<span class="sc">:.1f}</span><span class="ss"> seconds per day."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>

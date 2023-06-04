@@ -266,7 +266,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <div class="page-columns page-full"><p>Looking at the longest runs by total number of counts in the run is more interesting. so let’s do that. We take all our ordered counts and shift them by two; if the two authors are different, that means one streak has ended and a new one started. Taking the cumulative sum of all these changes means that each run is assigned the same number; exactly what we want. <a href="#tbl-runs">Table&nbsp;1</a> shows the top ten runs in r/counting history, as well as their total length.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>:</p><div class="no-row-height column-margin column-container"><li id="fn2"><p><sup>2</sup>&nbsp;I haven’t checked through all of them, but it’s likely all the lengths are off by one. That’s because I’ve forced every comment to be part of only one run, but the first comment in each run should simultaneously be the last comment in the previous run.</p></li></div></div>
 <div class="cell page-columns page-full" data-execution_count="2">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>column <span class="op">=</span> df[<span class="st">'username'</span>]</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>is_different_group <span class="op">=</span> (column <span class="op">!=</span> column.shift(<span class="dv">2</span>))</span>

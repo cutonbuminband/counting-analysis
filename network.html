@@ -302,7 +302,7 @@ div.csl-indent {
 </div>
 <p><a href="#tbl-best-friends">Table&nbsp;1</a> shows the 10 pairs of counters who have replied directly to each other most often. Evidently it’s more likely that someone will appear in the table if they’ve made a lot of counts, but it’s still interesting to see that the top spot isn’t held by the top two counters.</p>
 <div class="cell" data-execution_count="2">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>graph <span class="op">=</span> analysis.response_graph(counts, <span class="dv">1000</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>graph.columns <span class="op">=</span> [<span class="st">'source'</span>, <span class="st">'target'</span>, <span class="st">'weight'</span>]</span>
@@ -388,7 +388,7 @@ div.csl-indent {
 </div>
 <p>We can also see which counters have counted with the most other people.</p>
 <div class="cell" data-execution_count="3">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">'replying_to'</span>] <span class="op">=</span> counts[<span class="st">'username'</span>].shift(<span class="dv">1</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">'replied by'</span>] <span class="op">=</span> counts[<span class="st">'username'</span>].shift(<span class="op">-</span><span class="dv">1</span>)</span>
@@ -455,7 +455,7 @@ div.csl-indent {
 <p>Moving from a representation centering individual counts to one focussing on the relationship between pairs of counters lets us ask and answer some interesting questions.</p>
 <p>A natural question to ask is what is the <strong>diameter</strong> of the graph: that is, what is the smallest number of links, <span class="math inline">\(D\)</span>, such that every counter is connected to every other in <span class="math inline">\(D\)</span> links or fewer. To answer this and every other graph question, we’ll make use of the <a href="https://networkx.org/documentation/stable/">networkx</a> library.</p>
 <div class="cell" data-execution_count="4">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"The diameter is </span><span class="sc">{</span>nx<span class="sc">.</span>diameter(G)<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
@@ -466,7 +466,7 @@ div.csl-indent {
 <p>That means that every counter in the top 1000 counters is at most four links away from every other node.</p>
 <p>Instead of the diameter, we can also ask about the <strong>radius</strong> of the graph. This is defined as the smallest number of links, <span class="math inline">\(R\)</span>, such that <em>at least one</em> counter is connected to every other in <span class="math inline">\(R\)</span> links or fewer. You should be able to convince yourself that <span class="math inline">\(D \leq 2R\)</span>.</p>
 <div class="cell" data-execution_count="5">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"The radius is </span><span class="sc">{</span>nx<span class="sc">.</span>radius(G)<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
@@ -476,7 +476,7 @@ div.csl-indent {
 </div>
 <p>And in fact we see that there are counters that can reach every other count in 2 links or fewer. These counters are the center of the graph, and we can see who they are:</p>
 <div class="cell" data-execution_count="6">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Markdown(<span class="ss">f"There are </span><span class="sc">{</span><span class="bu">len</span>(nx.center(G))<span class="sc">}</span><span class="ss"> counters in the center of the graph. They are:</span><span class="ch">\n\n</span><span class="ss">- "</span><span class="op">+</span> <span class="st">", "</span>.join(nx.center(G)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
@@ -489,7 +489,7 @@ div.csl-indent {
 </div>
 <p>To get a feel for just how connected the graph is, we can calculate two more things. The first is the size of the biggest group such that ever counter is connected to every other counter in the group via three links or fewer.</p>
 <div class="cell" data-execution_count="7">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scipy</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> cvxopt</span>
@@ -519,7 +519,7 @@ div.csl-indent {
 <p>That’s basically everyone in the top 1000.</p>
 <p>And for two counters the number is</p>
 <div class="cell" data-execution_count="8">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>group_size(paths, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
@@ -532,7 +532,7 @@ div.csl-indent {
 <h3 class="anchored" data-anchor-id="cliques">Cliques</h3>
 <p>Moving down to shorter and shorter links, we can look at groups such that every counter in the group is directly connected to every other. These are known as <em>cliques</em> in the graph world. We can use <code>networkx</code> to easily calculate the size of the largest clique, and some more information about them</p>
 <div class="cell" data-execution_count="9">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> functools</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> itertools</span>
@@ -621,7 +621,7 @@ div.csl-indent {
 </ul>
 <p>Doing that for the counting graph we get</p>
 <div class="cell" data-execution_count="10">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> networkx.algorithms.core <span class="im">import</span> core_number</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>core <span class="op">=</span> core_number(G)</span>
@@ -647,7 +647,7 @@ Batagelj, V., and M. Zaversnik. 2003. <span>“An o(m) Algorithm for Cores Decom
 </ol>
 <p>The first question is absolutely vital to ask. If the strength of a connection between two counters is defined as just the total number of counts they have together, then no matter what else I do, the core ends up consisting of very few people who all have a lot of counts together.</p>
 <div class="cell" data-execution_count="11">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>coreness <span class="op">=</span> graph_tools.weighted_core_number(G, p<span class="op">=</span><span class="dv">1</span>)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>max_core_value <span class="op">=</span> <span class="bu">max</span>(coreness.values())</span>
@@ -672,7 +672,7 @@ k'_{i}= \left(k_{i}\right)^{1 - p} \left(\sum _{\textrm{neighbors} j}{w_{ij}}\ri
 \]</span></p>
 <p>where the sum runs over all neighbors <span class="math inline">\(j\)</span> of node <span class="math inline">\(i\)</span>, <span class="math inline">\(w_{ij}\)</span> is the strength of the connection between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>, and <span class="math inline">\(p\)</span> is a parameter I choose that varies between <span class="math inline">\(0\)</span> and <span class="math inline">\(1\)</span>. Setting <span class="math inline">\(p = 0\)</span> means that only the unweighted degree of the node is considered, while setting <span class="math inline">\(p = 1\)</span> means that only the sum of connection strengths matters. In between, you get a mix.</p>
 <div class="cell" data-execution_count="12">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>graph_tools.scale_weights(G)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>coreness <span class="op">=</span> graph_tools.weighted_core_number(G, p<span class="op">=</span><span class="dv">1</span>)</span>
@@ -690,7 +690,7 @@ k'_{i}= \left(k_{i}\right)^{1 - p} \left(\sum _{\textrm{neighbors} j}{w_{ij}}\ri
 </div>
 <p>This is a slightly smaller number then counters who were in the core for the unweighted case, and there’s also some difference in the composition of the members that remain:</p>
 <div class="cell" data-execution_count="13">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>Markdown(<span class="ss">f"There are </span><span class="sc">{</span><span class="bu">len</span>(<span class="bu">set</span>(weighted_core) <span class="op">^</span> <span class="bu">set</span>(unweighted_core))<span class="sc">}</span><span class="ss"> present in only one of the weighted or unweighted core."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>

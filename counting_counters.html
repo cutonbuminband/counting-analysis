@@ -314,7 +314,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>Now finding the total number of counters is easy</p>
 <div class="cell" data-execution_count="2">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">"username"</span>].nunique()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
@@ -327,7 +327,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>The number of counters in each thread</h1>
 <p>The counts in r/counting are split into threads of 1000 counts each, and in principle it should be possible to have a thread with 1000 different counters participating. That’s never happened, especially since most counts are made as part of a series of replies between just two users. Still, it might be interesting to see which threads had the most counters taking part:</p>
 <div class="cell" data-execution_count="3">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>levels <span class="op">=</span> counts.groupby([<span class="st">'submission_id'</span>, <span class="st">'username'</span>], sort<span class="op">=</span><span class="va">False</span>).size()</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>top <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size().sort_values(ascending<span class="op">=</span><span class="va">False</span>).head()</span>
@@ -371,7 +371,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Some of these threads really had a lot of participants!</p>
 <p>On the oppositve end of the scale, we can look at the threads with fewest participants. Since you’re not allowed to reply to yourself, at least two people have to take part in each thread. We can easily see how many times that’s happened:</p>
 <div class="cell" data-execution_count="4">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>perfect <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size() <span class="op">==</span> <span class="dv">2</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>perfect <span class="op">=</span> perfect.loc[perfect].index</span>
@@ -383,7 +383,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>So not a huge amount of times, but it’s happened. The last five threads with only two counters are</p>
 <div class="cell" data-execution_count="5">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>perfect_500s <span class="op">=</span> submissions.query(<span class="st">"submission_id in @perfect"</span>).copy().tail().iloc[::<span class="op">-</span><span class="dv">1</span>]</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> find_counters(submission_id):</span>
@@ -432,7 +432,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>We can plot the distribution of the number of counters in each thread; this is shown on <a href="#fig-counters-hist">Figure&nbsp;1</a>.</p>
 <div class="cell page-columns page-full" data-execution_count="6">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size()</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> px.histogram(</span>
@@ -480,7 +480,7 @@ if (outputEl) {{
 <p>The total number of counters that participate in a thread is an inherently noisy quantity. One person making a single count can change the total even if they make no other counts in the thread. A better way is to look at the <a href="https://en.wikipedia.org/wiki/Effective_number_of_parties">effective</a> number of counters taking part in a thread. The effective number takes into account how skewed the distribution of participants is. If 10 people count 100 times each in a thread, then both the actual and the effective number of counters is 10. If instead two people count 496 times each, and 8 people count once each, then the effective number of counters is 2.02, because two people made basically all the counts.</p>
 <p>We can find the submission with the highest number of effective counters.</p>
 <div class="cell" data-execution_count="7">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting.analysis <span class="im">import</span> effective_number_of_counters</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>effective_counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).<span class="bu">apply</span>(effective_number_of_counters)</span>
@@ -496,7 +496,7 @@ if (outputEl) {{
 </div>
 <p>We can also compare the total and the effective number of counters</p>
 <div class="cell" data-execution_count="8">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>total_counters <span class="op">=</span> levels.groupby(level<span class="op">=</span><span class="dv">0</span>, sort<span class="op">=</span><span class="va">False</span>).size()</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>merged <span class="op">=</span> (pd.concat([effective_counters, total_counters], axis<span class="op">=</span><span class="dv">1</span>))</span>
@@ -504,7 +504,7 @@ if (outputEl) {{
 </details>
 </div>
 <div class="cell" data-execution_count="9">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>table <span class="op">=</span> merged.describe().transpose()[[<span class="st">"mean"</span>, <span class="st">"50%"</span>, <span class="st">"max"</span>]]</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>Markdown(table.to_markdown(floatfmt<span class="op">=</span><span class="st">".1f"</span>, headers<span class="op">=</span>[<span class="st">"**Mean**"</span>, <span class="st">"**Median**"</span>, <span class="st">"**Maximum**"</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -538,7 +538,7 @@ if (outputEl) {{
 </div>
 <p>We can see that both the total and effective number of counters have a median that is lower than the mean, indicating that the distributions have long tails to the right. We can plot these, which is done on figure <a href="#fig-kdes">Figure&nbsp;2</a>. You can clearly see how much more spread out the actual number of counters is compared with the effective number. The effective number is really sharply peaked at 2, with 25% of the counts lying in the range 2-2.4.</p>
 <div class="cell page-columns page-full" data-execution_count="10">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>limits <span class="op">=</span> [<span class="dv">0</span>, <span class="dv">50</span>]</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>kde1 <span class="op">=</span> scipy.stats.gaussian_kde(merged[<span class="st">"Effective counters"</span>])</span>
@@ -632,7 +632,7 @@ if (outputEl) {{
 </div>
 <p>We can also plot the effective number of counters as a function of the actual number of counters. You can see generally, the more actual counters there are ina thread, there more effective counters there will be, but the relationship is fairly noisy.</p>
 <div class="cell" data-execution_count="12">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> px.scatter(data_frame<span class="op">=</span>merged, x<span class="op">=</span><span class="st">"Actual counters"</span>, y<span class="op">=</span><span class="st">"Effective counters"</span>, trendline<span class="op">=</span><span class="st">"ols"</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fig.update_traces(opacity<span class="op">=</span><span class="fl">0.5</span>)</span>

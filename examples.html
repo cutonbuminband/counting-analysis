@@ -268,7 +268,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>Validating side threads</h1>
 <p>The <code>rcounting</code> tools have various pieces of functionality to validate the side threads it knows about, both in terms of whether the counts follow the expected format, and whether the thread obeys any special rules that might apply. Here’s an example of what that looks like in a python script.</p>
 <div class="cell" data-execution_count="2">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pick a comment early in a chain</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>comments <span class="op">=</span> pd.DataFrame(tn.fetch_comments(<span class="st">"gja0ehe"</span>))</span>
@@ -285,7 +285,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>Network analysis</h1>
 <p>The rcounting tools also have functionality to do some network analysis. The following snippet will generate the (comment, replying to, weight) graph for the top 250 counters. The heavy lifting is done by the response graph [[file:../rcounting/analysis.py::def response_graph(df, n=250, username_column=“username”):][response_graph]] function in <a href="https://github.com/cutonbuminband/rcounting/blob/main/rcounting/analysis.py">analysis.py</a>.</p>
 <div class="cell" data-execution_count="3">
-<details open="">
+<details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting <span class="im">import</span> analysis, counters</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sqlite3</span>
