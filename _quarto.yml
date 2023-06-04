@@ -30,7 +30,7 @@ format:
   html:
     anchor-sections: true
     code-tools: true
-    code-fold: show
+    code-fold: true
     theme:
         light: flatly
         dark: darkly

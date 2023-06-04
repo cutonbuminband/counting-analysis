@@ -32,7 +32,6 @@ For me it's easier to work with a single database file with a well-defined struc
   from rcounting.reddit_interface import reddit
 
   pio.templates.default = "seaborn"
-  sns.set_theme()
   data_directory = Path(os.getenv("HOME")) / "Downloads" / "side_threads"
   side_threads_db = sqlite3.connect(
       Path(os.getenv("COUNTING_DATA")) / "side_threads.sqlite"

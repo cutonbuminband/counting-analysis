@@ -13,22 +13,27 @@ Before I can get started, there's one more thing to get out of the way, namely t
 I'll start off with some code to import the relevant packages and load the data.
 
 #+begin_src jupyter-python
-  #| code-fold: true
-  #| code-summary: "Code for importing packages and loading data"
-  from pathlib import Path
-  import pandas as pd
+  # | code-fold: true
+  # | code-summary: "Code for importing packages and loading data"
+  import os
   import sqlite3
+  from calendar import timegm
+  from datetime import datetime, timedelta
+  from pathlib import Path
+
   import matplotlib.pyplot as plt
   import numpy as np
+  import pandas as pd
+  import plotly.express as px
+  import plotly.graph_objects as go
+  import plotly.io as pio
+  from IPython.display import Markdown
   from rcounting import analysis, plots, units
   from rcounting.counters import apply_alias
-  from IPython.display import Markdown
-  import seaborn as sns
-  from datetime import datetime, timedelta
-  from calendar import timegm
-  sns.set_theme()
 
-  data_directory = Path("../../data")
+  pio.templates.default = "seaborn"
+
+  data_directory = Path(os.getenv("COUNTING_DATA"))
   db = sqlite3.connect(data_directory / "counting.sqlite")
 #+end_src
 
@@ -98,6 +103,7 @@ And finally I'll define some code for getting the raw data into slightly more ma
               .reset_index()[["week", "time"]])
       kdes["time_axis"] = np.hstack(n_weeks*[time_axis])
       kdes.columns = ["week", "rate", "time"]
+      kdes["time_date"] = pd.to_datetime(kdes["time"], unit="s")
       return kdes
 
 #+end_src
@@ -105,34 +111,62 @@ And finally I'll define some code for getting the raw data into slightly more ma
 With that out of the way, I'll select the weeks just before the start of DST and the weeks just after the end of DST for every year in r/counting's history. Then, I can plot the distribution of counts throughout the day for the week before and the week after the introduction of DST, and see how they differ:
 
 #+begin_src jupyter-python
+  # | code-fold: true
+  # | code-summary: "Code to plot the DST and DST - 1 distributions"
+  opacity = 0.8
+  fillcolors = [
+      "rgba" + x[3:-1] + f", {opacity})"
+      for x in pio.templates[pio.templates.default].layout.colorway
+  ]
+
+
   def query(x):
-      return (f"select timestamp, username from comments where timestamp between "
-              f"{x + OFFSET + minval * WEEK} and {x + OFFSET + maxval * WEEK} "
-              f"order by timestamp")
+      return (
+          f"select timestamp, username from comments where timestamp between "
+          f"{x + OFFSET + minval * WEEK} and {x + OFFSET + maxval * WEEK} "
+          f"order by timestamp"
+      )
+
 
   spring_all = wrangle(pd.concat([pd.read_sql(query(x), db) for x in dst_start.values()]))
 
+
   def mask(df):
-      return ((df["date"].dt.weekday < 5)
-              & (-2 <= df["week"])
-              & (df["week"] < 2))
+      return (df["date"].dt.weekday < 5) & (-2 <= df["week"]) & (df["week"] < 2)
+
 
   spring = spring_all[mask(spring_all)].copy()
   spring_kdes = generate_kdes(spring)
-  week_map = {-2: "Control without DST",
-              -1: "Without DST",
-              0: "With DST",
-              1: "Control with DST"}
+  week_map = {
+      -2: "Control without DST",
+      -1: "Without DST",
+      0: "With DST",
+      1: "Control with DST",
+  }
   spring_kdes["week_name"] = spring_kdes["week"].map(week_map)
-  for week in ["With DST", "Without DST"]:
-      df = spring_kdes.query("week_name == @week")
-      plt.fill_between(df["time"], df["rate"], alpha=0.8, label=week)
-  ax = plt.gca()
-  plots.make_time_axis(ax)
-  ax.set_ylabel("Counting rate (arbitrary units)")
-  ax.set_xlabel("Time of Day (UTC - 5)")
-  ax.legend()
-  plt.show()
+
+
+  def kde_plot(df, weeks):
+      fig = go.Figure()
+      for week, fillcolor in zip(weeks, fillcolors):
+          frame = df.query("week_name == @week")
+          fig.add_trace(
+              go.Scatter(
+                  x=frame["time_date"],
+                  y=frame["rate"],
+                  fill="tozeroy",
+                  name=week,
+                  mode="lines",
+                  fillcolor=fillcolor,
+              )
+          )
+      fig.update_xaxes(tickformat="%H:%M", title="Time of Day (UTC - 5)")
+      fig.update_yaxes(title="Counting rate (arbitrary units)")
+      fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+      return fig
+
+  fig = kde_plot(spring_kdes, ["Without DST", "With DST"])
+  fig.show()
 #+end_src
 
 
@@ -140,30 +174,34 @@ The shape of the two plots is similar, and it looks like the plot with DST is ge
 
 I can try and see what the optimal shift of the DST curve would be to get it to match the curve without DST.
 #+begin_src jupyter-python
+  # | code-fold: true
+  # | code-summary: "Code to calculate and plot DST and DST -1 overlaps"
   def calculate_shifted_overlap(df, week1, week2):
       fixed = df.loc[df["week_name"] == week2, "rate"].to_numpy()
       rotating = df.loc[df["week_name"] == week1, "rate"].to_numpy()
       norm = np.trapz(fixed * rotating, x=time_axis)
-      shifts = [np.trapz(fixed * np.roll(rotating, i), x=time_axis) / norm for i in range(len(fixed))]
-      optimal_shift = (np.argmax(shifts) + nbins / 2) % nbins - nbins/2
+      shifts = [
+          np.trapz(fixed * np.roll(rotating, i), x=time_axis) / norm
+          for i in range(len(fixed))
+      ]
+      optimal_shift = (np.argmax(shifts) + nbins / 2) % nbins - nbins / 2
       return shifts, optimal_shift
 
-  shifts, optimal_shift = calculate_shifted_overlap(spring_kdes, "With DST","Without DST")
 
-  plt.plot(shifts)
-  plt.xlim(0, len(shifts))
-  ax = plt.gca()
-  ticks, labels = zip(*[(x * 120, f"{x:02d}:00") for x in range(0, 25, 3)])
-  ax.set_xticks(ticks)
-  ax.set_xticklabels(labels)
+  shifts, optimal_shift = calculate_shifted_overlap(
+      spring_kdes, "With DST", "Without DST"
+  )
+
   print(f"The optimal shift is {int(optimal_shift * BIN_TO_MINUTE)} minutes.")
 
-  ax.set_xlabel("Shift (hours)")
-  ax.set_ylabel("Similarity score")
-  plt.show()
+  fig = px.line(x=pd.to_datetime(time_axis, unit="s"), y=shifts)
+  fig.update_xaxes(tickformat="%H:%M", title="Shift (hours)")
+  fig.update_yaxes(title="Similarity score")
+  fig.show()
 #+end_src
 
-That's a bit less than one hour, but it's still suggestive. Apparently it /is/ possoible to use the counting data to determine whether or not DST is currently active.
+
+That's a bit less than one hour, but it's still suggestive. Apparently it /is/ possible to use the counting data to determine whether or not DST is currently active.
 
 So, case closed, right?
 * Validating the model
@@ -174,15 +212,10 @@ It could be that there's a shift of one hour every week and DST has nothing to d
 ** Adding more weeks
 Let's start by looking at what happens before DST is active. For the preceding analysis to be valid, the distribution of counts throughout the day would need to be basically the same in the two weeks before the start of DST.
 #+begin_src jupyter-python
-  for week in ["Without DST", "Control without DST"]:
-      df = spring_kdes.query("week_name == @week")
-      plt.fill_between(df["time"], df["rate"], alpha=0.8, label=week)
-  ax = plt.gca()
-  plots.make_time_axis(ax)
-  ax.set_ylabel("Counting rate (arbitrary units)")
-  ax.set_xlabel("Time of Day (UTC - 5)")
-  ax.legend()
-  plt.show()
+  # | code-fold: true
+  # | code-summary: "Code to plot the DST - 1 and DST - 2 distributions"
+  fig = kde_plot(spring_kdes, ["Without DST", "Control without DST"])
+  fig.show()
 #+end_src
 
 Hm. Those two curves might be slightly more aligned than the two with and without DST, but it's not super clear. I can check the optimal shift
@@ -192,20 +225,24 @@ Hm. Those two curves might be slightly more aligned than the two with and withou
   print(f"The optimal shift is {int(optimal_shift * BIN_TO_MINUTE)} minutes.")
 #+end_src
 
-That's an even bigger shift than the one that happened when DST was introduced! I can plot the four curves for the two weeks before and after DST together and see if there's any obvious pattern.
+That's an even bigger shift than the one that happened when DST was introduced! I can plot the four curves for the two weeks before and after DST together and see if there's any obvious pattern. 
 #+begin_src jupyter-python
-  spring_kdes["shifted_rate"] = spring_kdes["rate"] + (spring_kdes["week"] + 2) * dy
-  ax = sns.lineplot(spring_kdes, x="time", y="shifted_rate", hue="week_name")
-  ax.legend_.set_title("Week")
-  plots.make_time_axis(ax)
-  ax.legend(loc="upper center", ncol=2)
-  ax.set_ylabel("Counting rate (arbitrary units)")
-  ax.set_xlabel("Time of Day (UTC - 5)")
-  ax.set_ylim(0, 0.34)
-  plt.show()
+  def plot(df):
+      fig = px.line(
+          df,
+          x="time_date",
+          y="rate",
+          color="week_name",
+          labels={"week_name": "Week", "time_date": "Time"},
+      )
+      fig.update_yaxes(title="Counting rate (arbitrary units)")
+      fig.update_xaxes(tickformat="%H:%M", title="Time of Day (UTC - 5)")
+      return fig
+  fig = plot(spring_kdes)
+  fig.show()
 #+end_src
 
-If you didn't have the legend, would you be able to tell which two of these curves were with DST and which were without? It seems that the variation from week to week is so big that any DST signal that might be present in the data is just swamped by all the noise.
+The plot is very busy but you can show or hide individual traces by clicking on the legend. If you didn't have the legend, would you be able to tell which two of these curves were with DST and which were without? It seems that the variation from week to week is so big that any DST signal that might be present in the data is just swamped by all the noise.
 
 ** Including the end of DST
 I can try and see if including the data for the end of DST makes any difference
@@ -217,18 +254,10 @@ I can try and see if including the data for the end of DST makes any difference
   autumn["week"] = -1 - autumn_all["week"]
   kdes = generate_kdes(pd.concat([spring, autumn]))
   kdes["week_name"] = kdes["week"].map(week_map)
-  kdes["shifted_rate"] = kdes["rate"] + (kdes["week"] + 2) * dy
-  ax = sns.lineplot(kdes, x="time", y="shifted_rate", hue="week_name")
-  ax.legend_.set_title("Week")
-  plots.make_time_axis(ax)
-  ax.legend(loc="upper center", ncol=2)
-  ax.set_ylabel("Counting rate (arbitrary units)")
-  ax.set_xlabel("Time of Day (UTC - 5)")
-  ax.set_ylim(0, 0.34)
-  ax.set_yticks([])
+  fig = plot(kdes)
+  fig.show()
   _, optimal_shift = calculate_shifted_overlap(kdes, "With DST", "Without DST")
   print(f"The optimal shift is {int(optimal_shift * BIN_TO_MINUTE)} minutes.")
-  plt.show()
 #+end_src
 
 As before -- would you be able to tell which of these graphs were with DST and which were without if you didn't have the legend?
@@ -259,8 +288,12 @@ Let's see how it goes!
       """Calculate the dst fingerprint for a single year"""
       transitions = dst_start if period == "spring" else dst_end
       x = df.resample("300s", on="date").size()
-      rates = x.div(x.groupby(pd.Grouper(freq="1d")).transform("sum")).to_frame(name="rate")
-      rates.index = rates.index - pd.to_datetime(rates.index.year.map(transitions), unit="s")
+      rates = x.div(x.groupby(pd.Grouper(freq="1d")).transform("sum")).to_frame(
+          name="rate"
+      )
+      rates.index = rates.index - pd.to_datetime(
+          rates.index.year.map(transitions), unit="s"
+      )
       shifted = rates.shift(freq="7d")
       shift = "-1h" if period == "spring" else "1h"
       dst_shifted = shifted.shift(freq=shift)
@@ -268,7 +301,9 @@ Let's see how it goes!
       dfs = []
 
       for df in [shifted, dst_shifted]:
-          background = pd.Series((maxval - minval) * [np.nan], range(minval, maxval), name="delta")
+          background = pd.Series(
+              (maxval - minval) * [np.nan], range(minval, maxval), name="delta"
+          )
           background.index.name = "date"
           f1 = pd.merge(rates, df, left_index=True, right_index=True)
           if len(f1) != 0:
@@ -285,38 +320,50 @@ Let's see how it goes!
       return groups.reset_index().melt(id_vars="year")
 
 
-  week_norm = spring_all.groupby(["year", "username"]).size() / spring_all.groupby("year").size()
+  def scatterplot(df):
+      total = (
+          df.set_index(["year", "date"])["value"].mul(year_norm).groupby(level=1).sum()
+      )
+      fig = px.scatter(
+          df,
+          x="date",
+          y="value",
+          color="year",
+          color_continuous_scale="plasma",
+          labels={"value": "DST fingerprint", "year": "Year", "date": "Week"},
+      )
+      line = go.Scatter(
+          x=total.index, y=total, line=dict(color="hsl(0, 0%, 40%)"), mode="lines"
+      )
+      fig.add_trace(line)
+      fig.add_hline(y=0, line_width=2, line_dash="dash", line_color="hsl(0, 0%, 20%)")
+
+      fig.update_xaxes(title="Weeks after start of DST")
+      fig.update_yaxes(title="DST fingerprint")
+      fig.update_coloraxes(showscale=False)
+      fig.update(layout_showlegend=False)
+      return fig
+
+
+  week_norm = (
+      spring_all.groupby(["year", "username"]).size() / spring_all.groupby("year").size()
+  )
   year_norm = spring_all.groupby("year").size() / len(spring_all)
 
-  df = multiple_dst_fingerprints(spring_all)
-  ax = sns.scatterplot(df, x="date", y="value", hue="year", palette="plasma")
-  sns.lineplot(
-      df.dropna().set_index(["year", "date"])["value"].mul(year_norm).groupby(level=1).sum(),
-      color="0.4",
-      legend=False
-  )
+  df = multiple_dst_fingerprints(spring_all).dropna()
 
-  ax.axhline(0, color="0.5", linestyle="--")
-  ax.set_xlabel("Weeks after start of DST")
-  ax.set_ylabel("DST fingerprint")
-  plt.show()
+  fig = scatterplot(df)
+  fig.show()
 #+end_src
 
 Hm. This isn't very promising. The DST signal should show up in this plot in the fact that the points at 0 should lie significantly higher than all the others. That's not the case at all.
 
 I can do the same thing for when DST ends, just for good measure, to see if the signal shows up there:
 #+begin_src jupyter-python
-  df = multiple_dst_fingerprints(autumn_all, "autumn")
-  ax = sns.scatterplot(df, x="date", y="value", hue="year", palette="plasma")
-  sns.lineplot(
-      df.dropna().set_index(["year", "date"])["value"].mul(year_norm).groupby(level=1).sum(),
-      color="0.4",
-      legend=False
-  )
-  ax.axhline(0, color="0.5", linestyle="--")
-  ax.set_xlabel("Weeks after end of DST")
-  ax.set_ylabel("DST fingerprint")
-  plt.show()
+  df = multiple_dst_fingerprints(autumn_all, "autumn").dropna()
+  fig = scatterplot(df)
+  fig.update_xaxes(title="Weeks after end of DST")
+  fig.show()
 #+end_src
 
 Unfortunately, that didn't seem to show the signal either. Before giving up completely and abandoning this as a fool's errand, there's one or two more things I can try.
@@ -332,8 +379,8 @@ So I can keep going with the disaggregation, and see if I get a clearer signal w
       fingerprint = (df.groupby(["year", "username"])
                      .apply(dst_fingerprint, period=period)
                      .reset_index()
-                     .melt(id_vars=["year", "username"], var_name="week")
-                     .set_index(["year", "username", "week"])["value"])
+                     .melt(id_vars=["year", "username"], var_name="date")
+                     .set_index(["year", "username", "date"])["value"])
       return fingerprint
 
   fingerprints = username_fingerprint(spring_all)
@@ -342,20 +389,10 @@ So I can keep going with the disaggregation, and see if I get a clearer signal w
       .mul(week_norm)
       .groupby(level=[0, 2])
       .sum()
-      .reset_index(name="fingerprint")
+      .reset_index(name="value")
   )
-  ax = sns.scatterplot(df, x="week", y="fingerprint", hue="year", palette="plasma")
-  sns.lineplot(
-      df.set_index(["year", "week"])["fingerprint"].mul(year_norm).groupby(level=1).sum(),
-      ax=ax,
-      color="0.4",
-      legend=False,
-  )
-  ax.axhline(0, color="0.5", linestyle="--")
-
-  ax.set_xlabel("Weeks after start of DST")
-  ax.set_ylabel("DST fingerprint")
-  plt.show()
+  fig = scatterplot(df)
+  fig.show()
 #+end_src
 
 Looking at this graph almost makes me think I have a sign error in the way I've defined the DST fingerprint. I've double checked, and I don't think it's the case, but this certainly isn't the peak at 0 I was hoping to see.
@@ -408,24 +445,12 @@ With that out of the way, I can plot the average similarity score for each year 
       .mul(week_norm)
       .groupby(level=[0, 2])
       .sum()
-      .reset_index(name="similarity")
+      .reset_index(name="value")
   )
 
-  ax = sns.scatterplot(similarity, x="week", y="similarity", hue="year", palette="plasma")
-  sns.lineplot(
-      (
-          similarity.set_index(["year", "week"])["similarity"]
-          .mul(year_norm)
-          .groupby("week")
-          .sum()
-      ),
-      color="0.4",
-      ax=ax,
-      legend=False
-  )
-  ax.set_xlabel("Weeks after start of DST")
-  ax.set_ylabel("Week consistency score")
-  plt.show()
+  fig = scatterplot(df)
+  fig.update_yaxes(title="Week consistency score")
+  fig.show()
 #+end_src
 
 I've decided to work with the consistency score rather than the DST fingerprint[fn:3], because I wanted to highlight the effect of the selection I've made. You can see on the graph that the score two weeks before the start of DST is signficantly higher than all the other weeks, and in particular the least consistent year for week -2 is much more consistent tht the least consistent year for all the other weeks.
