@@ -317,34 +317,34 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   </thead>
   <tbody>
     <tr>
-      <th>14960</th>
+      <th>853</th>
+      <td>Antichess</td>
+      <td>Countletics</td>
+      <td>109808</td>
+    </tr>
+    <tr>
+      <th>1633</th>
+      <td>Countletics</td>
+      <td>Antichess</td>
+      <td>109793</td>
+    </tr>
+    <tr>
+      <th>14934</th>
       <td>thephilsblogbar2</td>
       <td>GarlicoinAccount</td>
       <td>98844</td>
     </tr>
     <tr>
-      <th>2869</th>
+      <th>2943</th>
       <td>GarlicoinAccount</td>
       <td>thephilsblogbar2</td>
       <td>98821</td>
     </tr>
     <tr>
-      <th>1657</th>
-      <td>Countletics</td>
-      <td>nonsensy</td>
-      <td>92922</td>
-    </tr>
-    <tr>
-      <th>12832</th>
+      <th>12825</th>
       <td>nonsensy</td>
       <td>Countletics</td>
-      <td>92922</td>
-    </tr>
-    <tr>
-      <th>873</th>
-      <td>Antichess</td>
-      <td>Countletics</td>
-      <td>73007</td>
+      <td>93082</td>
     </tr>
   </tbody>
 </table>
@@ -664,45 +664,44 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>We start with some imports, which aren't particularly interesting, so they've been folded.</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-fold: true</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-summary: "Code for importing packages"</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting <span class="im">import</span> side_threads, thread_navigation <span class="im">as</span> tn</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="fu"># Validating side threads</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>The <span class="in">`rcounting`</span> tools have various pieces of functionality to validate the side threads it knows about, both in terms of whether the counts follow the expected format, and whether the thread obeys any special rules that might apply. Here's an example of what that looks like in a python script.</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># | code-summary: "Code for importing packages"</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting <span class="im">import</span> side_threads, thread_navigation <span class="im">as</span> tn</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="fu"># Validating side threads</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>The <span class="in">`rcounting`</span> tools have various pieces of functionality to validate the side threads it knows about, both in terms of whether the counts follow the expected format, and whether the thread obeys any special rules that might apply. Here's an example of what that looks like in a python script.</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Pick a comment early in a chain</span></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>comments <span class="op">=</span> pd.DataFrame(tn.fetch_comments(<span class="st">"gja0ehe"</span>))</span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>side_thread <span class="op">=</span> side_threads.get_side_thread(<span class="st">'slowestest'</span>)</span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"The thread is valid!"</span> <span class="cf">if</span> side_thread.is_valid_thread(comments) <span class="cf">else</span> <span class="st">"The thread is invalid"</span>)</span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Pick a comment early in a chain</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>comments <span class="op">=</span> pd.DataFrame(tn.fetch_comments(<span class="st">"gja0ehe"</span>))</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>side_thread <span class="op">=</span> side_threads.get_side_thread(<span class="st">'slowestest'</span>)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"The thread is valid!"</span> <span class="cf">if</span> side_thread.is_valid_thread(comments) <span class="cf">else</span> <span class="st">"The thread is invalid"</span>)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>The thread is valid - excellent! There's also a script that you can run from the command line to validate the most common threads. Try typing <span class="in">`rcounting validate -h`</span> in a terminal to see how to use it.</span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="fu"># Network analysis</span></span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>The rcounting tools also have functionality to do some network analysis. The following snippet will generate the (comment, replying to, weight) graph for the top 250 counters. The heavy lifting is done by the response graph [<span class="co">[</span><span class="ot">file:../rcounting/analysis.py::def response_graph(df, n=250, username_column="username"):</span><span class="co">][response_graph]</span>] function in <span class="co">[</span><span class="ot">analysis.py</span><span class="co">](https://github.com/cutonbuminband/rcounting/blob/main/rcounting/analysis.py)</span>.</span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting <span class="im">import</span> analysis, counters</span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sqlite3</span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>data_directory <span class="op">=</span> Path(<span class="st">"../data"</span>)</span>
-<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> sqlite3.<span class="ex">connect</span>(data_directory <span class="op">/</span> <span class="st">"counting.sqlite"</span>)</span>
-<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>counts <span class="op">=</span> pd.read_sql(<span class="st">"select comments.username "</span></span>
-<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"from comments join submissions "</span></span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"on comments.submission_id = submissions.submission_id "</span></span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"where comments.position &gt; 0 "</span></span>
-<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"order by submissions.timestamp, comments.position"</span>, db)</span>
-<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">"username"</span>] <span class="op">=</span> counts[<span class="st">"username"</span>].<span class="bu">apply</span>(counters.apply_alias)</span>
-<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="dv">250</span></span>
-<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>graph <span class="op">=</span> analysis.response_graph(counts, n, username_column<span class="op">=</span><span class="st">"username"</span>)</span>
-<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>graph.sort_values(ascending<span class="op">=</span><span class="va">False</span>, by<span class="op">=</span><span class="st">"Weight"</span>).head()</span>
-<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>The thread is valid - excellent! There's also a script that you can run from the command line to validate the most common threads. Try typing <span class="in">`rcounting validate -h`</span> in a terminal to see how to use it.</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="fu"># Network analysis</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>The rcounting tools also have functionality to do some network analysis. The following snippet will generate the (comment, replying to, weight) graph for the top 250 counters. The heavy lifting is done by the response graph [<span class="co">[</span><span class="ot">file:../rcounting/analysis.py::def response_graph(df, n=250, username_column="username"):</span><span class="co">][response_graph]</span>] function in <span class="co">[</span><span class="ot">analysis.py</span><span class="co">](https://github.com/cutonbuminband/rcounting/blob/main/rcounting/analysis.py)</span>.</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rcounting <span class="im">import</span> analysis, counters</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sqlite3</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>data_directory <span class="op">=</span> Path(<span class="st">"../data"</span>)</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> sqlite3.<span class="ex">connect</span>(data_directory <span class="op">/</span> <span class="st">"counting.sqlite"</span>)</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>counts <span class="op">=</span> pd.read_sql(<span class="st">"select comments.username "</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"from comments join submissions "</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"on comments.submission_id = submissions.submission_id "</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"where comments.position &gt; 0 "</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>                       <span class="st">"order by submissions.timestamp, comments.position"</span>, db)</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>counts[<span class="st">"username"</span>] <span class="op">=</span> counts[<span class="st">"username"</span>].<span class="bu">apply</span>(counters.apply_alias)</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="dv">250</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>graph <span class="op">=</span> analysis.response_graph(counts, n, username_column<span class="op">=</span><span class="st">"username"</span>)</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>graph.sort_values(ascending<span class="op">=</span><span class="va">False</span>, by<span class="op">=</span><span class="st">"Weight"</span>).head()</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
